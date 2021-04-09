@@ -145,6 +145,7 @@ contract error404Chef is Ownable {
         uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
         uint256 tokenReward = multiplier.mul(tokenPerBlock).mul(pool.allocPoint).div(totalAllocPoint);
         IMintable(address(global.token())).mint(tokenReward.div(10), global.devaddr());
+        IMintable(address(global.token())).mint(tokenReward.mul(1).div(100), global.lottery());
         IMintable(address(global.token())).mint(tokenReward, address(this));
         pool.accTokenPerShare = pool.accTokenPerShare.add(tokenReward.mul(1e12).div(lpSupply));
         pool.lastRewardBlock = block.number;
