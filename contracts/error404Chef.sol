@@ -20,6 +20,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "./libs/IMintable.sol";
 import "./libs/IStrategy.sol";
 import "./libs/IGlobals.sol";
+import "./libs/IReferrals.sol";
 
 contract error404Chef is Ownable {
     using SafeMath for uint256;
@@ -68,6 +69,8 @@ contract error404Chef is Ownable {
     uint256 public pid;
     // strategy utilization status
     bool public stop;
+    // Check if the strategy has a deflated token.
+    bool public deflation;
     
     // Info of each pool.
     PoolInfo[] public poolInfo;
@@ -89,6 +92,7 @@ contract error404Chef is Ownable {
         uint16 _depositFee,
         uint16 _feeStra,
         bool _checkStrategy,
+        bool _deflation,
         uint256 _pid,
         uint256 _tokenPerBlock
     ) public {
@@ -98,6 +102,7 @@ contract error404Chef is Ownable {
         strategy = _strategy;
         uint256 lastRewardBlock = block.number;
         pid = _pid;
+        deflation = _deflation;
         totalAllocPoint = totalAllocPoint.add(1000);
         poolInfo.push(PoolInfo({
             lpToken: _lpToken,
@@ -145,14 +150,22 @@ contract error404Chef is Ownable {
         uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
         uint256 tokenReward = multiplier.mul(tokenPerBlock).mul(pool.allocPoint).div(totalAllocPoint);
         IMintable(address(global.token())).mint(tokenReward.div(10), global.devaddr());
-        IMintable(address(global.token())).mint(tokenReward.mul(1).div(100), global.lottery());
         IMintable(address(global.token())).mint(tokenReward, address(this));
+        if(global.rewardLottery() > 0){
+            IMintable(address(global.token())).mint(tokenReward.mul(global.rewardLottery()).div(100 ether), global.lottery());
+        }
         pool.accTokenPerShare = pool.accTokenPerShare.add(tokenReward.mul(1e12).div(lpSupply));
         pool.lastRewardBlock = block.number;
     }
 
     // Deposit LP tokens to MasterChef for error404 allocation.
-    function deposit(uint256 _amount) public {
+    function deposit(uint256 _amount, address _sponsor) public {
+        if(IReferrals(address(global.referrals())).isMember(msg.sender) == false){
+            if(IReferrals(address(global.referrals())).isMember(_sponsor) == false){
+                _sponsor = IReferrals(address(global.referrals())).membersList(0);
+            }            
+            IReferrals(address(global.referrals())).addMember(msg.sender, _sponsor);
+        }
         PoolInfo storage pool = poolInfo[0];
         UserInfo storage user = userInfo[0][msg.sender];
         updatePool();
@@ -160,11 +173,18 @@ contract error404Chef is Ownable {
             uint256 _pending = user.amount.mul(pool.accTokenPerShare).div(1e12).sub(user.rewardDebt);
             if(_pending > 0) {
                 safeTokenTransfer(msg.sender, _pending);
+                if(global.rewardSponsors() > 0){
+                    _sponsor = IReferrals(address(global.referrals())).getSponsor(msg.sender);
+                    IMintable(address(global.token())).mint(_pending.mul(global.rewardSponsors()).div(100 ether), _sponsor);
+                }
             }
         }
         uint256 depositFeeBuy = 0;
         uint256 depositFeeStra = 0;  
         if(_amount > 0) {
+            if(IGlobals(address(global.token())).BURN_RATE() > 0 && deflation == true){
+                _amount = _amount.sub(_amount.mul(IGlobals(address(global.token())).BURN_RATE()).div(100 ether));
+            }
             pool.lpToken.safeTransferFrom(address(msg.sender), address(this), _amount);
             if(pool.depositFee > 0){
                 depositFeeBuy = _amount.mul(pool.depositFee).div(10000);
@@ -199,6 +219,10 @@ contract error404Chef is Ownable {
             uint256 _pending = user.amount.mul(pool.accTokenPerShare).div(1e12).sub(user.rewardDebt);
             if(_pending > 0) {
                 safeTokenTransfer(msg.sender, _pending);
+                if(global.rewardSponsors() > 0){
+                    address _sponsor = IReferrals(address(global.referrals())).getSponsor(msg.sender);
+                    IMintable(address(global.token())).mint(_pending.mul(global.rewardSponsors()).div(100 ether), _sponsor);
+                }
             }
         }
         if(_amount > 0) {

@@ -71,23 +71,23 @@ contract error404Referrals is Ownable {
     }
 
     // Returns the list of referrals
-    function getParentTree(address _member) public view returns (address[] memory){
-        address[] memory parentTree = new address[](members[_member].referredUsers);
-        address referrerLevel = membersList[members[_member].referrerID];
-        if (referrerLevel != address(0)) {
-            parentTree[0] = referrerLevel;
-        }
-        for (uint256 i = 1; i < members[_member].referredUsers; i++) {
-            if (referrerLevel != address(0)) {
-                referrerLevel = membersList[members[referrerLevel].referrerID];
-                if (referrerLevel != address(0)) {
-                    parentTree[i] = referrerLevel;
+    function getListReferrals(address _member) public view returns (address[] memory){
+        address[] memory referrals = new address[](members[_member].referredUsers);
+        if(members[_member].referredUsers > 0){
+            for (uint256 i = 0; i < members[_member].referredUsers; i++) {
+                if(memberChild[members[_member].id][i] != address(0)){
+                    referrals[i] = memberChild[members[_member].id][i];
+                } else {
+                    break;
                 }
-            } else {
-                break;
             }
         }
-        return parentTree;
+        return referrals;
+    }
+
+    // Returns the address of the sponsor of an account
+    function getSponsor(address account) public view returns (address) {
+        return membersList[members[account].referrerID];
     }
 
     // Check if it is an address with permission of mod

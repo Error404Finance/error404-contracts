@@ -31,4 +31,10 @@ interface IGlobals {
 
     function reward() external view returns (address);
 
+    function rewardLottery() external view returns (uint256);
+
+    function rewardSponsors() external view returns (uint256);
+
+    function BURN_RATE() external view returns (uint256);
+
 }

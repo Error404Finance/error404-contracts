@@ -37,7 +37,11 @@ contract error404Globals is Ownable {
     address public feeAddress;
     // Address the contract of the profit strategy and add liquidity
     address public reward;
-
+    // Percentage of tokens created for the lottery
+    uint256 public rewardLottery;
+    // Percentage of tokens created for sponsors
+    uint256 public rewardSponsors;
+    
     constructor(
         address _token,
         address _nft,
@@ -106,6 +110,18 @@ contract error404Globals is Ownable {
         emit eventSetRewardAddress(msg.sender, _addr);
     }
 
+    // Update reward lottery.
+    function setRewardLottery(uint256 _value) external onlyOwner{
+        rewardLottery = _value;
+        emit eventSetRewardLottery(msg.sender, _value);
+    }
+
+    // Update reward sponsors.
+    function setRewardSponsors(uint256 _value) external onlyOwner{
+        rewardSponsors = _value;
+        emit eventSetRewardSponsors(msg.sender, _value);
+    }
+
     event eventSetDevAddress(address indexed user, address indexed _addr);
     event eventSetFeeAddress(address indexed user, address indexed _addr);
     event eventSetReferralsAddress(address indexed user, address indexed _addr);
@@ -114,5 +130,7 @@ contract error404Globals is Ownable {
     event eventSetNFTAddress(address indexed user, address indexed _addr);
     event eventSetTokenAddress(address indexed user, address indexed _addr);
     event eventSetRewardAddress(address indexed user, address indexed _addr);
-
+    event eventSetRewardLottery(address indexed user, uint256 _value);
+    event eventSetRewardSponsors(address indexed user, uint256 _value);
+    
 }
