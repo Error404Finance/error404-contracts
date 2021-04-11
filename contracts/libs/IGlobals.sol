@@ -39,4 +39,10 @@ interface IGlobals {
 
     function BURN_RATE() external view returns (uint256);
 
+    function paths(address _token, uint256 _id) external view returns (address[] memory);
+
+    function token0() external view returns (address);
+
+    function token1() external view returns (address);
+
 }
