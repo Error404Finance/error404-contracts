@@ -25,4 +25,6 @@ interface IStrategy {
 
     function leaveStaking(uint256 _amount) external;
 
+    function importStrategy(uint256 _amount) external;
+
 }

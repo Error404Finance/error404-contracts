@@ -89,8 +89,8 @@ contract error404Chef is Ownable {
         IGlobals _globalsAddr,
         IERC20 _reward,
         IStrategy _strategy,
-        uint16 _depositFee,
-        uint16 _feeStra,
+        uint256 _depositFee,
+        uint256 _feeStra,
         bool _checkStrategy,
         bool _deflation,
         uint256 _pid,
@@ -149,8 +149,10 @@ contract error404Chef is Ownable {
         }
         uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
         uint256 tokenReward = multiplier.mul(tokenPerBlock).mul(pool.allocPoint).div(totalAllocPoint);
-        IMintable(address(global.token())).mint(tokenReward.div(10), global.devaddr());
         IMintable(address(global.token())).mint(tokenReward, address(this));
+        if(global.rewardDevs() > 0){
+            IMintable(address(global.token())).mint(tokenReward.mul(global.rewardDevs()).div(100 ether), global.devaddr());
+        }
         if(global.rewardLottery() > 0){
             IMintable(address(global.token())).mint(tokenReward.mul(global.rewardLottery()).div(100 ether), global.lottery());
         }
@@ -302,6 +304,39 @@ contract error404Chef is Ownable {
         }
     }
 
+    // Function to change the strategy to obtain better profits.
+    function changeStrategy(IStrategy _strategy, IERC20 _reward, uint256 _typeChef) external onlyOwner {
+        if(address(strategy) != address(0) && address(_reward) != address(0) && !stop){
+            PoolInfo storage pool = poolInfo[0];
+            if(typeChef == 1){
+                strategy.enterStaking(0);
+            } else {
+                strategy.deposit(pid, 0);
+            }
+            reward.safeTransfer(global.reward(), reward.balanceOf(address(this)));
+            strategy.emergencyWithdraw(pid);
+            strategy = _strategy;
+            reward = _reward;
+            typeChef = _typeChef;
+            uint256 _amount = pool.lpToken.balanceOf(address(this));
+            pool.lpToken.safeApprove(address(strategy), uint(~0));
+            if(typeChef == 1){
+                strategy.enterStaking(_amount);
+            } else {
+                strategy.deposit(pid, _amount);
+            }
+            emit eventSetImportStrategy(address(pool.lpToken), address(strategy), _amount, now);
+        }
+    }
+
+    // function to change the farm fee and the strategy fee.
+    function changeFees(uint256 _depositFee, uint256 _feeStra) external onlyOwner {
+        PoolInfo storage pool = poolInfo[0];
+        pool.depositFee = _depositFee;
+        pool.feeStra = _feeStra;
+        emit eventSetFees(_depositFee, _feeStra);
+    }    
+
     event Deposit(address indexed user, uint256 amount);
     event Withdraw(address indexed user, uint256 amount);
     event EmergencyWithdraw(address indexed user, uint256 amount);
@@ -309,5 +344,7 @@ contract error404Chef is Ownable {
     event eventEmergencyWithdrawPool(uint256 _time);
     event eventHarvest(uint256 _time);
     event SetUpdateEmissionRate(uint256 indexed last_tokenPerBlock, uint256 indexed new_tokenPerBlock);
-    
+    event eventSetImportStrategy(address _token, address _strategy, uint256 _amount, uint256 _time);
+    event eventSetFees(uint256 _depositFee, uint256 _feeStra);
+
 }
