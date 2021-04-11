@@ -37,6 +37,8 @@ interface IGlobals {
 
     function rewardDevs() external view returns (uint256);
 
+    function feeDevs() external view returns (uint256);
+
     function BURN_RATE() external view returns (uint256);
 
     function paths(address _token, uint256 _id) external view returns (address[] memory);

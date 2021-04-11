@@ -43,6 +43,8 @@ contract error404Globals is Ownable {
     uint256 public rewardSponsors;
     // Percentage of tokens created for developer
     uint256 public rewardDevs;
+    // Percentage of fees for developer
+    uint256 public feeDevs;
     // List of the path for the exchange of tokens
     mapping(address => mapping(uint256 => address[])) public paths;
 
@@ -132,6 +134,12 @@ contract error404Globals is Ownable {
         emit eventSetRewardDevs(msg.sender, _value);
     }
 
+    // Update fees devs.
+    function setFeeDevs(uint256 _value) external onlyOwner{
+        feeDevs = _value;
+        emit eventSetFeedDevs(msg.sender, _value);
+    }    
+
     // function to update the path of a token
     function setPath(address _token, uint256 _id, address[] calldata _path) external onlyOwner{
         paths[_token][_id] = _path;
@@ -149,6 +157,7 @@ contract error404Globals is Ownable {
     event eventSetRewardLottery(address indexed user, uint256 _value);
     event eventSetRewardSponsors(address indexed user, uint256 _value);
     event eventSetRewardDevs(address indexed user, uint256 _value);
+    event eventSetFeedDevs(address indexed user, uint256 _value);
     event eventSetpath(address indexed user, uint256 _id);
 
 }
