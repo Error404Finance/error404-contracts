@@ -19,10 +19,14 @@ import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./libs/IPancakeFactory.sol";
 import "./libs/IChef.sol";
+import "./libs/IFees.sol";
 
 contract error404Helper is Ownable {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
+
+    // Address of the fee contract
+    IFees public FEES;
 
     // Lp CAKE_WBNB token address
     address private constant CAKE_POOL = 0xA527a61703D82139F8a06Bc30097cC9CAA2df5A6;
@@ -41,7 +45,7 @@ contract error404Helper is Ownable {
 
     // Info of each pool.
     struct PoolInfo {
-        IChef strategy;         // Farm Strategy Address
+        IChef strategy;             // Farm Strategy Address
         IERC20 tokenA;              // Address of tokenA contract.
         IERC20 tokenB;              // Address of tokenA contract.
         IERC20 lp;                  // Address of LP token contract.
@@ -57,6 +61,10 @@ contract error404Helper is Ownable {
     PoolInfo[] public poolInfo;
     // List of strategies in the helper
     mapping(address => bool) public farms;
+
+    constructor(IFees _FEES) public {
+        FEES = _FEES;
+    }    
 
     // Returns the total farms
     function poolLength() public view returns (uint256) {
@@ -146,6 +154,7 @@ contract error404Helper is Ownable {
         if(totalFarms > 0){
             for (uint256 i = 0; i < totalFarms; i++) {
                 poolInfo[i].strategy.harvest();
+                FEES.convert(address(poolInfo[i].tokenA), address(poolInfo[i].tokenB), address(poolInfo[i].lp), poolInfo[i].isTokenOnly);
             }
             emit eventHarvestAll(now);
         }
@@ -157,6 +166,7 @@ contract error404Helper is Ownable {
         if(totalFarms > 0 && totalFarms >= _end){
             for (uint256 i = _start; i <= _end; i++) {
                 poolInfo[i].strategy.harvest();
+                FEES.convert(address(poolInfo[i].tokenA), address(poolInfo[i].tokenB), address(poolInfo[i].lp), poolInfo[i].isTokenOnly);
             }
             emit eventHarvest(_start, _end, now);
         }
