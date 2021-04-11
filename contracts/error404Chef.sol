@@ -267,6 +267,8 @@ contract error404Chef is Ownable {
         if(address(strategy) != address(0) && !stop){
             strategy.emergencyWithdraw(pid);
             stop = true;
+            strategy = IStrategy(0x000000000000000000000000000000000000dEaD);
+            poolInfo[0].strategy = false;
             emit eventEmergencyWithdrawPool(now);
             emit SetStop(true);
         }
@@ -329,13 +331,31 @@ contract error404Chef is Ownable {
         }
     }
 
+    // Function to recover lost tokens in the strategy
+    function recoverBEP20(address tokenAddress, uint256 tokenAmount) external onlyOwner {
+        require(tokenAddress != address(poolInfo[0].lpToken) && tokenAddress != address(reward), "tokenAddress");
+        IERC20(tokenAddress).safeTransfer(owner(), tokenAmount);
+        emit Recovered(tokenAddress, tokenAmount);
+    }    
+
     // function to change the farm fee and the strategy fee.
     function changeFees(uint256 _depositFee, uint256 _feeStra) external onlyOwner {
         PoolInfo storage pool = poolInfo[0];
         pool.depositFee = _depositFee;
         pool.feeStra = _feeStra;
         emit eventSetFees(_depositFee, _feeStra);
-    }    
+    }
+
+    // general pool information is returned for the helper
+    function infoForHelper() external view returns(uint256, uint256, uint256, uint256, address){
+        return (
+            tokenPerBlock,
+            poolInfo[0].amount,
+            poolInfo[0].depositFee,
+            poolInfo[0].feeStra,
+            address(strategy)
+        );
+    }
 
     event Deposit(address indexed user, uint256 amount);
     event Withdraw(address indexed user, uint256 amount);
@@ -346,5 +366,6 @@ contract error404Chef is Ownable {
     event SetUpdateEmissionRate(uint256 indexed last_tokenPerBlock, uint256 indexed new_tokenPerBlock);
     event eventSetImportStrategy(address _token, address _strategy, uint256 _amount, uint256 _time);
     event eventSetFees(uint256 _depositFee, uint256 _feeStra);
+    event Recovered(address token, uint256 amount);
 
 }
