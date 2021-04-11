@@ -18,7 +18,6 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./libs/IPancakeFactory.sol";
-import "./libs/IStrategy.sol";
 import "./libs/IChef.sol";
 
 contract error404Helper is Ownable {
@@ -42,7 +41,7 @@ contract error404Helper is Ownable {
 
     // Info of each pool.
     struct PoolInfo {
-        IStrategy strategy;         // Farm Strategy Address
+        IChef strategy;         // Farm Strategy Address
         IERC20 tokenA;              // Address of tokenA contract.
         IERC20 tokenB;              // Address of tokenA contract.
         IERC20 lp;                  // Address of LP token contract.
@@ -60,12 +59,12 @@ contract error404Helper is Ownable {
     mapping(address => bool) public farms;
 
     // Returns the total farms
-    function poolLength() external view returns (uint256) {
+    function poolLength() public view returns (uint256) {
         return poolInfo.length;
     }
 
     // Function to add a new farm
-    function addFarm(IStrategy _strategy, IERC20 _tokenA, IERC20 _tokenB, IERC20 _lp, bool _isTokenOnly, string memory _farm, string memory _tokenSymbol, string memory _quoteTokenSymbol, string memory _provider) external onlyOwner {
+    function addFarm(IChef _strategy, IERC20 _tokenA, IERC20 _tokenB, IERC20 _lp, bool _isTokenOnly, string memory _farm, string memory _tokenSymbol, string memory _quoteTokenSymbol, string memory _provider) external onlyOwner {
         require(farms[address(_strategy)] == false, "strategy already exists");
         poolInfo.push(PoolInfo({
             strategy: _strategy,
@@ -84,7 +83,7 @@ contract error404Helper is Ownable {
     }
 
     // Function to change strategy and provider to a specific farm
-    function setFarm(uint256 _pid, IStrategy _strategy, string memory _provider) external onlyOwner {
+    function setFarm(uint256 _pid, IChef _strategy, string memory _provider) external onlyOwner {
         require(farms[address(_strategy)] == false, "strategy already exists");
         require(address(poolInfo[_pid].tokenA) != address(0), "non-existent farm");
         poolInfo[_pid].strategy = _strategy;
@@ -132,18 +131,41 @@ contract error404Helper is Ownable {
         uint256 totalSupply = pool.lp.totalSupply();
         uint256 decimals_tokenA = ERC20(address(pool.tokenA)).decimals();
         uint256 decimals_tokenB = ERC20(address(pool.tokenB)).decimals();
-        return (balanceOf_tokenA, balanceOf_tokenB, totalSupply, decimals_tokenA, decimals_tokenB, IChef(address(pool.strategy)).pid());
+        return (balanceOf_tokenA, balanceOf_tokenB, totalSupply, decimals_tokenA, decimals_tokenB, pool.strategy.pid());
     }
 
     // Function that returns general values of the farm tokens
     function getFarmChef(uint256 _pid) public view returns(uint256, uint256, uint256, uint256, address){
         PoolInfo storage pool = poolInfo[_pid];
-        IChef chef = IChef(address(pool.strategy));
-        return chef.infoForHelper();
+        return pool.strategy.infoForHelper();
+    }
+
+    // function to harvest all strategies
+    function harvestAll() external {
+        uint256 totalFarms = poolLength();
+        if(totalFarms > 0){
+            for (uint256 i = 0; i < totalFarms; i++) {
+                poolInfo[i].strategy.harvest();
+            }
+            emit eventHarvestAll(now);
+        }
+    }
+
+    // function to harvest certain strategies
+    function harvest(uint256 _start, uint256 _end) external {
+        uint256 totalFarms = poolLength();
+        if(totalFarms > 0 && totalFarms >= _end){
+            for (uint256 i = _start; i <= _end; i++) {
+                poolInfo[i].strategy.harvest();
+            }
+            emit eventHarvest(_start, _end, now);
+        }
     }
 
     event eventAddFarm(address indexed _strategy, uint256 indexed _pid, uint256 _time);
     event eventSetFarm(address indexed _strategy, uint256 indexed _pid, uint256 _time);
     event eventStopFarm(uint256 indexed _pid, uint256 _time);
-    
+    event eventHarvestAll(uint256 _time);
+    event eventHarvest(uint256 _start, uint256 _end, uint256 _time);
+
 }

@@ -21,6 +21,7 @@ import "./libs/IMintable.sol";
 import "./libs/IStrategy.sol";
 import "./libs/IGlobals.sol";
 import "./libs/IReferrals.sol";
+import "./libs/IPancakeSwapRouter.sol";
 
 contract error404Chef is Ownable {
     using SafeMath for uint256;
@@ -78,6 +79,11 @@ contract error404Chef is Ownable {
     mapping (uint256 => mapping (address => UserInfo)) public userInfo;
     // Total allocation points. Must be the sum of all allocation points in all pools.
     uint256 public totalAllocPoint = 0;
+
+    // WBNB token address
+    IERC20 private constant WBNB = IERC20(0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c);
+    // Pancake swap router address
+    IPancakeSwapRouter public router = IPancakeSwapRouter(0x05fF2B0DB69458A0750badebc4f9e13aDd608C7F);
     
     // MasterChef type to organize calls to strategy
     //   0. Global
@@ -115,6 +121,7 @@ contract error404Chef is Ownable {
             amount: 0
         }));
         _lpToken.safeApprove(address(strategy), uint(~0));
+        reward.safeApprove(address(router), uint(~0));
     }
 
     // Return reward multiplier over the given _from to _to block.
@@ -293,6 +300,14 @@ contract error404Chef is Ownable {
         emit SetUpdateEmissionRate(last_tokenPerBlock, _tokenPerBlock);
     }
 
+    // exchange profit tokens for bnb, then send them to the rewards strategy
+    function _flipToWBNB() internal {
+        router.swapExactTokensForTokensSupportingFeeOnTransferTokens(balanceReward(), uint256(0), global.paths(address(reward), 0), address(this), now.add(1800));
+        if(balanceWBNB() > 0){
+            WBNB.safeTransfer(global.reward(), balanceWBNB());
+        }
+    }
+
     // We harvest the strategy and the profits obtained are transferred to the strategy to buy and add liquidity to the token.
     function harvest() external {
         if(address(strategy) != address(0) && !stop){
@@ -301,7 +316,9 @@ contract error404Chef is Ownable {
             } else {
                 strategy.deposit(pid, 0);
             }
-            reward.safeTransfer(global.reward(), reward.balanceOf(address(this)));
+            if(balanceReward() > 0){
+                _flipToWBNB();
+            }
             emit eventHarvest(now);
         }
     }
@@ -315,13 +332,16 @@ contract error404Chef is Ownable {
             } else {
                 strategy.deposit(pid, 0);
             }
-            reward.safeTransfer(global.reward(), reward.balanceOf(address(this)));
+            if(balanceReward() > 0){
+                _flipToWBNB();
+            }
             strategy.emergencyWithdraw(pid);
             strategy = _strategy;
             reward = _reward;
             typeChef = _typeChef;
             uint256 _amount = pool.lpToken.balanceOf(address(this));
             pool.lpToken.safeApprove(address(strategy), uint(~0));
+            reward.safeApprove(address(router), uint(~0));
             if(typeChef == 1){
                 strategy.enterStaking(_amount);
             } else {
@@ -355,6 +375,16 @@ contract error404Chef is Ownable {
             poolInfo[0].feeStra,
             address(strategy)
         );
+    }
+
+    // returns the balance of the wbnb token
+    function balanceWBNB() public view returns(uint256){
+        return WBNB.balanceOf(address(this));
+    }
+
+    // returns the balance of the reward token
+    function balanceReward() public view returns(uint256){
+        return reward.balanceOf(address(this));
     }
 
     event Deposit(address indexed user, uint256 amount);

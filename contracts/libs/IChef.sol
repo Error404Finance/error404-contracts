@@ -19,4 +19,6 @@ interface IChef {
 
     function pid() external view returns(uint256);
 
+    function harvest() external;
+
 }
