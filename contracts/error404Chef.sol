@@ -22,6 +22,7 @@ import "./libs/IStrategy.sol";
 import "./libs/IGlobals.sol";
 import "./libs/IReferrals.sol";
 import "./libs/IPancakeSwapRouter.sol";
+import "./libs/IHelper.sol";
 
 contract error404Chef is Ownable {
     using SafeMath for uint256;

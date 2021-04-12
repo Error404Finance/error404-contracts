@@ -17,6 +17,7 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "./libs/IHelper.sol";
 
 contract error404NFT is ERC721, Ownable {
 
@@ -36,7 +37,7 @@ contract error404NFT is ERC721, Ownable {
     mapping(address => mapping(uint => uint)) public tokensUser; // User NFTs
     uint256 public lastIdPath; // Last NFT id created
 
-    constructor(IERC20 _token) public ERC721("DeepWeb NFTs", "DeepWeb") {
+    constructor(IERC20 _token, string memory _name, string memory _alias) public ERC721(_name, _alias) {
         token = _token;
         _newNFT(0);
         lastId = 1;

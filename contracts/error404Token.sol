@@ -14,16 +14,17 @@ pragma solidity ^0.6.12;
 */
 
 import "@pancakeswap/pancake-swap-lib/contracts/token/BEP20/BEP20.sol";
+import "./libs/IHelper.sol";
 
 // error404Token with Governance.
-contract error404Token is BEP20('error404 Token', '404') {
+contract error404Token is BEP20 {
 
     address public moderator; // Address moderator
     address dead = 0x000000000000000000000000000000000000dEaD; // Address Burn
     bool public paused; // Status to stop or start deflation
     uint256 public BURN_RATE = 2 ether; // Percentage to burn for deflation
 
-    constructor() public {
+    constructor(string memory _name, string memory _alias) BEP20(_name, _alias) public {
         moderator = msg.sender;
     }
 

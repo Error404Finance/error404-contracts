@@ -20,6 +20,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "./libs/IPancakeFactory.sol";
 import "./libs/IChef.sol";
 import "./libs/IFees.sol";
+import "./libs/IHelper.sol";
 
 contract error404Helper is Ownable {
     using SafeMath for uint256;
