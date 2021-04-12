@@ -12,3 +12,5 @@
 /.DS_Store
 yarn.lock
 /yarn.lock
+setup.sh
+/setup.sh
