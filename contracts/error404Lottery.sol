@@ -124,7 +124,9 @@ contract error404Lottery {
     // Claiming tokens from non-winning users
     function claim() public {
         require(unclaimedTokens[msg.sender] > 0, "you don't have tokens to claim");
-        token.transfer(msg.sender, unclaimedTokens[msg.sender]);
+        IHelper helper = IHelper(address(token));
+        uint256 deflation = unclaimedTokens[msg.sender].mul(helper.BURN_RATE()).div(100 ether);
+        token.transfer(msg.sender, unclaimedTokens[msg.sender].sub(deflation));
         unclaimed = unclaimed.sub(unclaimedTokens[msg.sender]);
         unclaimedTokens[msg.sender] = 0;
     }
