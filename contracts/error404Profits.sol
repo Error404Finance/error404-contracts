@@ -74,12 +74,12 @@ contract error404Profits is Ownable {
         IERC20 _reward,
         uint256 _typeChef,
         uint256 _pid,
-        IERC20 _token,
-        IHelper _helper,
-        IGlobals _global,
         IERC20 _tokenA,
         IERC20 _tokenB,
-        IERC20 _tokenLP
+        IERC20 _tokenLP,        
+        IERC20 _token,
+        IHelper _helper,
+        IGlobals _global
     ) public {
         setMod(msg.sender, true);
         strategy = _strategy;
