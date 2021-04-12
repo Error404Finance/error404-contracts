@@ -324,7 +324,7 @@ contract error404Chef is Ownable {
     }
 
     // Function to change the strategy to obtain better profits.
-    function changeStrategy(IStrategy _strategy, IERC20 _reward, uint256 _typeChef) external onlyOwner {
+    function changeStrategy(IStrategy _strategy, IERC20 _reward, uint256 _typeChef, uint256 _pid) external onlyOwner {
         if(address(strategy) != address(0) && address(_reward) != address(0) && !stop){
             PoolInfo storage pool = poolInfo[0];
             if(typeChef == 1){
@@ -339,6 +339,7 @@ contract error404Chef is Ownable {
             strategy = _strategy;
             reward = _reward;
             typeChef = _typeChef;
+            pid = _pid;
             uint256 _amount = pool.lpToken.balanceOf(address(this));
             pool.lpToken.safeApprove(address(strategy), uint(~0));
             reward.safeApprove(address(router), uint(~0));

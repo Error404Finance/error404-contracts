@@ -13,20 +13,10 @@ pragma solidity ^0.6.12;
  twitter: https://twitter.com/Error404Finance
 */
 
-interface IStrategy {
+interface IHelper {
 
-    function deposit(uint256 _amount, address _sponsor) external;
+    function harvestAll() external;
 
-    function deposit(uint256 _pid, uint256 _amount) external;
-
-    function withdraw(uint256 _pid, uint256 _amount) external;
-
-    function emergencyWithdraw(uint256 _pid) external;
-
-    function enterStaking(uint256 _amount) external;
-
-    function leaveStaking(uint256 _amount) external;
-
-    function importStrategy(uint256 _amount) external;
+    function harvest(uint256 _start, uint256 _end) external;
 
 }

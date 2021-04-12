@@ -39,7 +39,7 @@ contract error404Referrals is Ownable {
         _;
     }
 
-    // Add and remove a moe
+    // Add and remove a mod
     function setMod(address mod, bool canMod) external onlyOwner {
         if (canMod) {
             _mods[mod] = canMod;
