@@ -42,6 +42,8 @@ contract error404Profits is Ownable {
     IERC20 public token;
     // error404 pool address
     IStrategy public pool404;
+    // allowed direction to import
+    address public importer;
     
     // MasterChef type to organize calls to strategy
     //   0. Global
@@ -65,7 +67,8 @@ contract error404Profits is Ownable {
     IPancakeFactory private constant factory = IPancakeFactory(0xBCfCcbde45cE874adCB698cC183deBcF17952812);    
     // Address Burn
     address dead = 0x000000000000000000000000000000000000dEaD;
-
+    // list of approved tokens
+    mapping(address => mapping(address => bool)) public approvals;
     // List Mods
     mapping(address => bool) private _mods;
 
@@ -79,7 +82,8 @@ contract error404Profits is Ownable {
         IERC20 _tokenLP,
         IERC20 _token,
         IHelper _helper,
-        IGlobals _global
+        IGlobals _global,
+        address _importer
     ) public {
         setMod(msg.sender, true);
         strategy = _strategy;
@@ -92,6 +96,7 @@ contract error404Profits is Ownable {
         tokenA = _tokenA;
         tokenB = _tokenB;
         tokenLP = _tokenLP;
+        importer = _importer;
         _approve(token, address(router));
         _approve(WBNB, address(router));
         _approve(BUSD, address(router));
@@ -107,14 +112,17 @@ contract error404Profits is Ownable {
 
     // function to assign error404 pool address
     function setPool(IStrategy _pool404) external onlyOwner {
-        require(address(_pool404) == address(0), "!pool404");
+        require(address(_pool404) != address(0), "!pool404");
         pool404 = _pool404;
+        IERC20 lp404 = IERC20(factory.getPair(address(token), address(WBNB)));
+        _approve(lp404, address(pool404));
         emit eventSetPool(now);
     }
 
     // exchange tokens for tokens
     function _flipTokens(IERC20 _token, uint256 _amount, uint256 _type) internal {
-        if(_amount > 0){
+        if(_amount > 0 && address(_token) != address(WBNB)){
+            _approve(_token, address(router));
             router.swapExactTokensForTokensSupportingFeeOnTransferTokens(_amount, uint256(0), global.getPaths(address(_token), _type), address(this), now.add(1800));
         }
     }   
@@ -185,30 +193,31 @@ contract error404Profits is Ownable {
         if(global.feeDevs() > 0){
             WBNB.safeTransfer(global.devaddr(), getBalance(WBNB).mul(global.feeDevs()).div(100 ether));
         }
-        uint256 deflation = IGlobals(address(global.token())).BURN_RATE().add(1 ether);
+        IERC20 lp404 = IERC20(factory.getPair(address(token), address(WBNB)));
+        uint256 balanceToken = getBalanceToken(lp404, token);
+        uint256 balanceWBNB = getBalanceToken(lp404, WBNB);
         uint256 amountWBNB = getBalance(WBNB);
-        uint256 tokens_solds = tokensSend(amountWBNB);
-        uint256 tokens_solds_min = tokens_solds.sub(tokens_solds.mul(deflation).div(100 ether));
-        uint256 value_min = amountWBNB.sub(amountWBNB.mul(deflation).div(100 ether));
-        uint256 tokensMint = tokens_solds.add(tokens_solds.mul(deflation).div(100 ether));
-        IMintable(address(global.token())).mint(tokensMint, address(this));
+        uint256 oneHundred = 100 ether;
+        uint256 percentageWBNB = oneHundred.mul(amountWBNB).div(balanceWBNB);
+        uint256 percentageToken = oneHundred.mul(oneHundred).div(balanceToken);
+        uint256 tokensToSend = percentageWBNB.mul(oneHundred).div(percentageToken);
+        IMintable(address(global.minter())).mint(tokensToSend, address(this));
         router.addLiquidity(
             address(token),
             address(WBNB),
-            tokens_solds,
+            tokensToSend,
             amountWBNB,
-            tokens_solds_min,
-            value_min,
+            0,
+            0,
             address(this),
             now.add(1800)
         );
-        IERC20 lp404 = IERC20(factory.getPair(address(token), address(WBNB)));
         if(getBalance(lp404) > 0){
             pool404.deposit(getBalance(lp404), address(0));
         }
         if(getBalance(token) > 0){
             token.safeTransfer(dead, getBalance(token));
-        }        
+        }
     }
 
     // The profits of the strategy are added by liquidity with error404 and WBNB
@@ -228,8 +237,8 @@ contract error404Profits is Ownable {
     function _closeProfits() internal {
         _farm(0);
         _flipTokens(reward, getBalance(reward), 0);
-        _flipTokens(tokenA, getBalance(tokenA), 0);
         _flipTokens(tokenB, getBalance(tokenB), 0);
+        _flipTokens(tokenA, getBalance(tokenA), 0);
         strategy.emergencyWithdraw(pid);
         if(address(tokenA) != address(0) && address(tokenB) == address(0)){
             _flipTokens(tokenA, getBalance(tokenA), 0);
@@ -237,8 +246,8 @@ contract error404Profits is Ownable {
             if(getBalance(tokenLP) > 0){
                 router.removeLiquidity(address(tokenA), address(tokenB), getBalance(tokenLP), 0, 0, address(this), block.timestamp);
             }
-            _flipTokens(tokenA, getBalance(tokenA), 0);
             _flipTokens(tokenB, getBalance(tokenB), 0);
+            _flipTokens(tokenA, getBalance(tokenA), 0);
         }
     }
 
@@ -273,23 +282,35 @@ contract error404Profits is Ownable {
         }
     }
 
+    // internal function to approve tokens
+    function _approve(IERC20 _token, address _to) internal {
+        if(address(_token) != address(0) && approvals[address(_token)][_to] == false){
+            _token.approve(_to, uint(~0));
+            approvals[address(_token)][_to] = true;
+        }
+    }
+
+    // function to approve tokens
+    function approveTokens(IERC20 _token, address _to) external onlyMods {
+        _approve(_token, _to);
+        emit eventApproveTokens(address(_token), _to, now);
+    }
+
     // returns the balance of the token
     function getBalance(IERC20 _token) public view returns(uint256){
         return _token.balanceOf(address(this));
+    }
+
+    // returns the balance of the token
+    function getBalanceToken(IERC20 _token, IERC20 _lp) public view returns(uint256){
+        return _lp.balanceOf(address(_token));
     }
 
     // Only mods
     modifier onlyMods {
         require(isMod(msg.sender) == true, "error404Profits: caller is not the mods");
         _;
-    }
-
-    // internal function to approve tokens
-    function _approve(IERC20 _token, address _to) internal {
-        if(address(_token) != address(0)){
-            _token.approve(_to, uint(~0));
-        }
-    }    
+    }  
 
     // Check if it is an address with permission of mod
     function isMod(address account) public view returns (bool) {
@@ -306,23 +327,70 @@ contract error404Profits is Ownable {
         emit eventSetMod(mod, canMod);
     }
 
-    // sort of two tokens
-    function sortTokens(address _tokenA, address _tokenB) internal pure returns (address token0, address token1) {
-        (token0, token1) = _tokenA < _tokenB ? (_tokenA, _tokenB) : (_tokenB, _tokenA);
+    // Function to recover lost tokens
+    function recoverBEP20(IERC20 _token, address[] calldata _path) external onlyOwner {
+        uint256 _amount = getBalance(_token);
+        if(_amount > 0){
+            _approve(_token, address(router));
+            router.swapExactTokensForTokensSupportingFeeOnTransferTokens(_amount, uint256(0), _path, address(this), now.add(1800));
+            emit Recovered(address(_token), _amount);
+        }
     }
 
-    // Extract the reserve of 2 LP tokens
-    function getReserves(address _tokenA, address _tokenB) public view returns (uint reserveA, uint reserveB) {
-        (address token0,) = sortTokens(_tokenA, _tokenB);
-        (uint reserve0, uint reserve1,) = IPancakeRouter02(address(tokenLP)).getReserves();
-        (reserveA, reserveB) = address(_tokenA) == address(token0) ? (reserve0, reserve1) : (reserve1, reserve0);
+    // Function to recover lost tokensLP
+    function recoverLP(IERC20 _tokenA, IERC20 _tokenB) external onlyOwner {
+        IERC20 lp = IERC20(factory.getPair(address(_tokenA), address(_tokenB)));
+        uint256 _amount = getBalance(lp);
+        if(_amount > 0){
+            _approve(lp, address(router));
+            router.removeLiquidity(address(_tokenA), address(_tokenB), _amount, 0, 0, address(this), block.timestamp);
+            emit RecoveredLP(address(_tokenA), address(_tokenB), _amount);
+        }
     }
 
-    // Returns amount of tokens that are needed for a WEI value
-    function tokensSend(uint valueWEI) public view returns(uint256){
-        (uint reserveA, uint reserveB) = getReserves(address(token), address(WBNB));
-        return router.quote(valueWEI, reserveB, reserveA);
-    }    
+    // leave the farms
+    function leaveFarms() external onlyOwner {
+        _farm(0);
+        strategy.emergencyWithdraw(pid);
+        emit eventLeaveFarms(now);
+    }
+
+    // leave the farm
+    function leaveFarm() external onlyOwner {
+        _farm(0);
+        emit eventLeaveFarm(now);
+    }
+
+    // leave the farm emergencyWithdraw
+    function leaveFarmEmergencyWithdraw() external onlyOwner {
+        strategy.emergencyWithdraw(pid);
+        emit eventLeaveFarmEmergencyWithdraw(now);
+    }
+
+    // emergency withdrawal and convert all tokens to WBNB
+    function emergencyWithdraw() public onlyOwner {
+        _closeProfits();
+        emit eventEmergencyWithdraw(now);
+    }
+
+    // Change profit strategy
+    function changeProfitsStrategy(address _newProfit, bool _closed) public onlyOwner {
+        if(_closed){
+            _closeProfits();
+        }
+        uint256 _amount = getBalance(WBNB);
+        _approve(WBNB, _newProfit);
+        IHelper(_newProfit).importProfit(_amount);
+        emit eventChangeProfitsStrategy(address(this), _newProfit, _amount, now);
+    }
+
+    // Import the WBNB tokens from the old strategy
+    function importProfit(uint256 _amount) external {
+        require(importer == msg.sender, "!importer");
+        WBNB.safeTransferFrom(address(msg.sender), address(this), _amount);
+        deposit(false, 0, 0);
+        emit eventImportProfit(_amount, now);
+    }
 
     event eventSetMod(address _mod, bool _canMod);
     event eventDeposit(uint256 _time);
@@ -330,5 +398,14 @@ contract error404Profits is Ownable {
     event eventCloseProfits(uint256 _time);
     event eventSetPool(uint256 _time);    
     event eventChangeStrategy(address _reward, address _strategy, address _tokenA, address _tokenB, address _tokenLP, uint256 _time);
-
+    event Recovered(address _token, uint256 _amount);
+    event RecoveredLP(address _tokenA, address _tokenB, uint256 _amount);
+    event eventEmergencyWithdraw(uint256 _time);
+    event eventChangeProfitsStrategy(address _last, address _new, uint256 _amount, uint256 _time);
+    event eventImportProfit(uint256 _amount, uint256 _time);
+    event eventLeaveFarms(uint256 _time);
+    event eventLeaveFarm(uint256 _time);
+    event eventLeaveFarmEmergencyWithdraw(uint256 _time);
+    event eventApproveTokens(address _token, address _to, uint256 _time);
+    
 }

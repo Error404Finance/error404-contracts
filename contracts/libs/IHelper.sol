@@ -19,8 +19,8 @@ interface IHelper {
 
     function harvest(uint256 _start, uint256 _end) external;
 
-    function BURN_RATE() external view returns (uint256);
-
     function temporalBytecode() external;
+
+    function importProfit(uint256 _amount) external;
 
 }

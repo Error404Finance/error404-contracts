@@ -192,9 +192,6 @@ contract error404Chef is Ownable {
         uint256 depositFeeBuy = 0;
         uint256 depositFeeStra = 0;  
         if(_amount > 0) {
-            if(IGlobals(address(global.token())).BURN_RATE() > 0 && deflation == true){
-                _amount = _amount.sub(_amount.mul(IGlobals(address(global.token())).BURN_RATE()).div(100 ether));
-            }
             pool.lpToken.safeTransferFrom(address(msg.sender), address(this), _amount);
             if(pool.depositFee > 0){
                 depositFeeBuy = _amount.mul(pool.depositFee).div(10000);
@@ -368,6 +365,12 @@ contract error404Chef is Ownable {
         emit eventSetFees(_depositFee, _feeStra);
     }
 
+    // function that changes the status of deflationary token
+    function changeDeflation(bool _status) external onlyOwner {
+        deflation = _status;
+        emit eventChangeDeflation(_status, now);
+    }
+
     // general pool information is returned for the helper
     function infoForHelper() external view returns(uint256, uint256, uint256, uint256, address){
         return (
@@ -399,5 +402,6 @@ contract error404Chef is Ownable {
     event eventSetImportStrategy(address _token, address _strategy, uint256 _amount, uint256 _time);
     event eventSetFees(uint256 _depositFee, uint256 _feeStra);
     event Recovered(address token, uint256 amount);
-
+    event eventChangeDeflation(bool _status, uint256 amount);
+    
 }

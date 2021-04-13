@@ -19,61 +19,7 @@ import "./libs/IHelper.sol";
 // error404Token with Governance.
 contract error404Token is BEP20 {
 
-    address public moderator; // Address moderator
-    address dead = 0x000000000000000000000000000000000000dEaD; // Address Burn
-    bool public paused; // Status to stop or start deflation
-    uint256 public BURN_RATE = 2 ether; // Percentage to burn for deflation
-
-    constructor(string memory _name, string memory _alias) BEP20(_name, _alias) public {
-        moderator = msg.sender;
-    }
-
-    // Only the moderator
-    modifier onlyMod() {
-        require(moderator == msg.sender, "Must be mod");
-        _;
-    }
-
-    // Moderator change
-    function changeMod(address _addr) public {
-        require(msg.sender == moderator, "mod: wut?");
-        emit eventChangeMod(_addr, moderator);
-        moderator = _addr;
-    }
-
-    // Percentage change for deflation
-    function setBurnRate(uint256 _value) external onlyMod {
-        emit eventBurnRate(_value, BURN_RATE);
-        BURN_RATE = _value;
-    }
-
-    // Start deflation
-    function unpause() external onlyMod {
-        paused = false;
-        emit eventUnPause(now);
-    }
-
-    // Deflation Stopped
-    function onpause() external onlyMod {
-        paused = true;
-        emit eventOnPause(now);
-    }
-
-    // Deflate before transferring the tokens
-    function _transfer(address sender, address recipient, uint256 amount) internal virtual override {
-        if(!paused){
-            uint256 burnAmount = amount.mul(BURN_RATE).div(100 ether);
-            uint256 sendAmount = amount.sub(burnAmount);
-            super._transfer(sender, dead, burnAmount);
-            super._transfer(sender, recipient, sendAmount);
-            amount = sendAmount;
-        }
-    }
-
-    event eventChangeMod(address _new, address _last);
-    event eventBurnRate(uint256 _new, uint256 _last);
-    event eventUnPause(uint256 _time);
-    event eventOnPause(uint256 _time);    
+    constructor(string memory _name, string memory _alias) BEP20(_name, _alias) public {}
 
     // @dev Creates `_amount` token to `_to`. Must only be called by the owner (MasterChef).
     function mint(address _to, uint256 _amount) public onlyOwner {

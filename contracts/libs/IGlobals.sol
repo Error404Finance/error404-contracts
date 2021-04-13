@@ -39,8 +39,6 @@ interface IGlobals {
 
     function feeDevs() external view returns (uint256);
 
-    function BURN_RATE() external view returns (uint256);
-
     function paths(address _token, uint256 _id) external view returns (address[] memory);
 
     function getPaths(address _token, uint256 _id) external view returns(address[] memory);
