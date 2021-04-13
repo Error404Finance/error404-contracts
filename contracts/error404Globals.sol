@@ -147,6 +147,16 @@ contract error404Globals is Ownable {
         emit eventSetpath(_token, _id);
     }
 
+    // function that returns the path of the token routes
+    function getPaths(address _token, uint256 _id) public view returns(address[] memory) {
+        uint256 _length =  paths[_token][_id].length;
+        address[] memory _paths = new address[](_length);
+        for (uint256 i = 0; i < _length; i++) {
+            _paths[i] = paths[_token][_id][i];
+        }
+        return _paths;
+    }    
+
     event eventSetDevAddress(address indexed user, address indexed _addr);
     event eventSetFeeAddress(address indexed user, address indexed _addr);
     event eventSetReferralsAddress(address indexed user, address indexed _addr);

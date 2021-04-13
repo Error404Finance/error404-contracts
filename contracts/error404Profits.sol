@@ -76,7 +76,7 @@ contract error404Profits is Ownable {
         uint256 _pid,
         IERC20 _tokenA,
         IERC20 _tokenB,
-        IERC20 _tokenLP,        
+        IERC20 _tokenLP,
         IERC20 _token,
         IHelper _helper,
         IGlobals _global
@@ -92,6 +92,9 @@ contract error404Profits is Ownable {
         tokenA = _tokenA;
         tokenB = _tokenB;
         tokenLP = _tokenLP;
+        _approve(token, address(router));
+        _approve(WBNB, address(router));
+        _approve(BUSD, address(router));
         _approve(reward, address(router));
         _approve(tokenA, address(router));
         _approve(tokenB, address(router));
@@ -112,7 +115,7 @@ contract error404Profits is Ownable {
     // exchange tokens for tokens
     function _flipTokens(IERC20 _token, uint256 _amount, uint256 _type) internal {
         if(_amount > 0){
-            router.swapExactTokensForTokensSupportingFeeOnTransferTokens(_amount, uint256(0), global.paths(address(_token), _type), address(this), now.add(1800));
+            router.swapExactTokensForTokensSupportingFeeOnTransferTokens(_amount, uint256(0), global.getPaths(address(_token), _type), address(this), now.add(1800));
         }
     }   
 
@@ -284,7 +287,7 @@ contract error404Profits is Ownable {
     // internal function to approve tokens
     function _approve(IERC20 _token, address _to) internal {
         if(address(_token) != address(0)){
-            _token.safeApprove(_to, uint(~0));
+            _token.approve(_to, uint(~0));
         }
     }    
 

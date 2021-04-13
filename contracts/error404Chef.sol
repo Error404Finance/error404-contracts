@@ -121,8 +121,8 @@ contract error404Chef is Ownable {
             strategy: _checkStrategy,
             amount: 0
         }));
-        _lpToken.safeApprove(address(strategy), uint(~0));
-        reward.safeApprove(address(router), uint(~0));
+        _lpToken.approve(address(strategy), uint(~0));
+        reward.approve(address(router), uint(~0));
     }
 
     // Return reward multiplier over the given _from to _to block.
@@ -157,12 +157,12 @@ contract error404Chef is Ownable {
         }
         uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
         uint256 tokenReward = multiplier.mul(tokenPerBlock).mul(pool.allocPoint).div(totalAllocPoint);
-        IMintable(address(global.token())).mint(tokenReward, address(this));
+        IMintable(address(global.minter())).mint(tokenReward, address(this));
         if(global.rewardDevs() > 0){
-            IMintable(address(global.token())).mint(tokenReward.mul(global.rewardDevs()).div(100 ether), global.devaddr());
+            IMintable(address(global.minter())).mint(tokenReward.mul(global.rewardDevs()).div(100 ether), global.devaddr());
         }
         if(global.rewardLottery() > 0){
-            IMintable(address(global.token())).mint(tokenReward.mul(global.rewardLottery()).div(100 ether), global.lottery());
+            IMintable(address(global.minter())).mint(tokenReward.mul(global.rewardLottery()).div(100 ether), global.lottery());
         }
         pool.accTokenPerShare = pool.accTokenPerShare.add(tokenReward.mul(1e12).div(lpSupply));
         pool.lastRewardBlock = block.number;
@@ -185,7 +185,7 @@ contract error404Chef is Ownable {
                 safeTokenTransfer(msg.sender, _pending);
                 if(global.rewardSponsors() > 0){
                     _sponsor = IReferrals(address(global.referrals())).getSponsor(msg.sender);
-                    IMintable(address(global.token())).mint(_pending.mul(global.rewardSponsors()).div(100 ether), _sponsor);
+                    IMintable(address(global.minter())).mint(_pending.mul(global.rewardSponsors()).div(100 ether), _sponsor);
                 }
             }
         }
@@ -231,7 +231,7 @@ contract error404Chef is Ownable {
                 safeTokenTransfer(msg.sender, _pending);
                 if(global.rewardSponsors() > 0){
                     address _sponsor = IReferrals(address(global.referrals())).getSponsor(msg.sender);
-                    IMintable(address(global.token())).mint(_pending.mul(global.rewardSponsors()).div(100 ether), _sponsor);
+                    IMintable(address(global.minter())).mint(_pending.mul(global.rewardSponsors()).div(100 ether), _sponsor);
                 }
             }
         }
@@ -303,7 +303,7 @@ contract error404Chef is Ownable {
 
     // exchange profit tokens for bnb, then send them to the rewards strategy
     function _flipToWBNB() internal {
-        router.swapExactTokensForTokensSupportingFeeOnTransferTokens(balanceReward(), uint256(0), global.paths(address(reward), 0), address(this), now.add(1800));
+        router.swapExactTokensForTokensSupportingFeeOnTransferTokens(balanceReward(), uint256(0), global.getPaths(address(reward), 0), address(this), now.add(1800));
         if(balanceWBNB() > 0){
             WBNB.safeTransfer(global.reward(), balanceWBNB());
         }
@@ -342,8 +342,8 @@ contract error404Chef is Ownable {
             typeChef = _typeChef;
             pid = _pid;
             uint256 _amount = pool.lpToken.balanceOf(address(this));
-            pool.lpToken.safeApprove(address(strategy), uint(~0));
-            reward.safeApprove(address(router), uint(~0));
+            pool.lpToken.approve(address(strategy), uint(~0));
+            reward.approve(address(router), uint(~0));
             if(typeChef == 1){
                 strategy.enterStaking(_amount);
             } else {

@@ -31,6 +31,8 @@ contract error404Fees is Ownable {
     IERC20 private constant WBNB = IERC20(0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c);
     // Pancake swap router address
     IPancakeRouter02 public router = IPancakeRouter02(0x05fF2B0DB69458A0750badebc4f9e13aDd608C7F);
+    // list of approved tokens
+    mapping(address => bool) public approvals;
 
     constructor(IGlobals _global) public {
         global = _global;
@@ -39,7 +41,7 @@ contract error404Fees is Ownable {
     // exchange profit tokens for bnb, then send them to the rewards strategy
     function _flipToWBNB(IERC20 _token) internal {
         if(address(_token) != address(WBNB)){
-            router.swapExactTokensForTokensSupportingFeeOnTransferTokens(getBalance(_token), uint256(0), global.paths(address(_token), 0), address(this), now.add(1800));
+            router.swapExactTokensForTokensSupportingFeeOnTransferTokens(getBalance(_token), uint256(0), global.getPaths(address(_token), 0), address(this), now.add(1800));
             if(getBalance(WBNB) > 0){
                 if(global.feeDevs() > 0){
                     WBNB.safeTransfer(global.devaddr(), getBalance(WBNB).mul(global.feeDevs()).div(100 ether));
@@ -51,6 +53,10 @@ contract error404Fees is Ownable {
 
     // function that removes the lp and the tokens, exchanges them for wbnb and sends them to the profits strategy
     function convert(IERC20 _tokenA, IERC20 _tokenB, IERC20 _lp, bool _isTokenOnly) external {
+        _approve(_tokenA);
+        _approve(_tokenB);
+        _approve(_lp);
+        _approve(WBNB);
         if(_isTokenOnly){
             if(getBalance(_tokenA) > 0){
                 _flipToWBNB(_tokenA);
@@ -67,6 +73,14 @@ contract error404Fees is Ownable {
             }
         }
     }
+
+    // internal function to approve tokens
+    function _approve(IERC20 _token) internal {
+        if(address(_token) != address(0) && approvals[address(_token)] == false){
+            _token.approve(address(router), uint(~0));
+            approvals[address(_token)] = true;
+        }
+    }    
 
     // returns the balance of the token
     function getBalance(IERC20 _token) public view returns(uint256){
