@@ -89,6 +89,7 @@ contract error404Chef is Ownable {
     // MasterChef type to organize calls to strategy
     //   0. Global
     //   1. PancakeSwap
+    //   2. SmartChef
     uint256 public typeChef;
 
     constructor(
@@ -101,8 +102,10 @@ contract error404Chef is Ownable {
         bool _checkStrategy,
         bool _deflation,
         uint256 _pid,
-        uint256 _tokenPerBlock
+        uint256 _tokenPerBlock,
+        uint256 _typeChef
     ) public {
+        typeChef = _typeChef;
         global = _globalsAddr;
         reward = _reward;
         tokenPerBlock = _tokenPerBlock;
@@ -207,6 +210,8 @@ contract error404Chef is Ownable {
             if(pool.strategy && !stop){
                 if(typeChef == 1){
                     strategy.enterStaking(_amount.sub(depositFeeBuy));
+                } else if(typeChef == 2){
+                    strategy.deposit(_amount.sub(depositFeeBuy));
                 } else {
                     strategy.deposit(pid, _amount.sub(depositFeeBuy));
                 }
@@ -236,6 +241,8 @@ contract error404Chef is Ownable {
             if(pool.strategy && !stop){
                 if(typeChef == 1){
                     strategy.leaveStaking(_amount);
+                } else if(typeChef == 2){
+                    strategy.withdraw(_amount);
                 } else {
                     strategy.withdraw(pid, _amount);
                 }
@@ -258,6 +265,8 @@ contract error404Chef is Ownable {
         if(pool.strategy && !stop){
             if(typeChef == 1){
                 strategy.leaveStaking(amount);
+            } else if(typeChef == 2){
+                strategy.withdraw(amount);
             } else {
                 strategy.withdraw(pid, amount);
             }
@@ -270,7 +279,11 @@ contract error404Chef is Ownable {
     // Withdraw without caring about rewards. EMERGENCY ONLY STRATEGY.
     function emergencyWithdrawPool() external onlyOwner {
         if(address(strategy) != address(0) && !stop){
-            strategy.emergencyWithdraw(pid);
+            if(typeChef == 2){
+                strategy.emergencyWithdraw();   
+            } else {
+                strategy.emergencyWithdraw(pid);
+            }
             stop = true;
             strategy = IStrategy(0x000000000000000000000000000000000000dEaD);
             poolInfo[0].strategy = false;
@@ -311,6 +324,8 @@ contract error404Chef is Ownable {
         if(address(strategy) != address(0) && !stop){
             if(typeChef == 1){
                 strategy.enterStaking(0);
+            } else if(typeChef == 2){
+                strategy.deposit(0);
             } else {
                 strategy.deposit(pid, 0);
             }
@@ -327,13 +342,19 @@ contract error404Chef is Ownable {
             PoolInfo storage pool = poolInfo[0];
             if(typeChef == 1){
                 strategy.enterStaking(0);
+            } else if(typeChef == 2){
+                strategy.deposit(0);
             } else {
                 strategy.deposit(pid, 0);
             }
             if(balanceReward() > 0){
                 _flipToWBNB();
             }
-            strategy.emergencyWithdraw(pid);
+            if(typeChef == 2){
+                strategy.emergencyWithdraw();
+            } else {
+                strategy.emergencyWithdraw(pid);
+            }
             strategy = _strategy;
             reward = _reward;
             typeChef = _typeChef;
@@ -343,6 +364,8 @@ contract error404Chef is Ownable {
             reward.approve(address(router), uint(~0));
             if(typeChef == 1){
                 strategy.enterStaking(_amount);
+            } else if(typeChef == 2){
+                strategy.deposit(_amount);
             } else {
                 strategy.deposit(pid, _amount);
             }
