@@ -80,7 +80,6 @@ contract error404NFT is ERC721, Ownable {
     function buy(uint _id) external {
         require(_id > 0, "!id");
         require(paths[_id].isExist == true, "!isExist");
-        require(checkNFT(msg.sender, _id) == false, "Previously purchased");
         require(token.transferFrom(msg.sender, address(this), paths[_id].price) == true, "You have not approved the deposit");
         _mint(msg.sender, lastId);
         token.transfer(dead, paths[_id].price);
