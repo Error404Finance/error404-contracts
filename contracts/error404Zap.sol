@@ -141,7 +141,9 @@ contract error404Zap is Ownable {
         if(address(_tokenB) == address(WBNB)){
             router.swapExactTokensForTokensSupportingFeeOnTransferTokens(getBalance(WBNB).div(2), uint256(0), _pathA, address(this), now.add(1800));
         } else {
-            router.swapExactTokensForTokensSupportingFeeOnTransferTokens(_value, uint256(0), _pathB, address(this), now.add(1800));
+            if(_pathB.length > 0){
+                router.swapExactTokensForTokensSupportingFeeOnTransferTokens(_value, uint256(0), _pathB, address(this), now.add(1800));
+            }
             router.swapExactTokensForTokensSupportingFeeOnTransferTokens(getBalance(_tokenB).div(2), uint256(0), _pathA, address(this), now.add(1800));
         }
         router.addLiquidity(
