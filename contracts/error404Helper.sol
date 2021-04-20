@@ -173,6 +173,18 @@ contract error404Helper is Ownable {
         }
     }
 
+    // function to harvest a user and send the pending earnings tokens
+    function harvestAllUser() external {
+        uint256 totalFarms = poolLength();
+        if(totalFarms > 0){
+            for (uint256 i = 0; i <= totalFarms; i++) {
+                if(poolInfo[i].strategy.pending(msg.sender) > 0){
+                    poolInfo[i].strategy.harvestExternal(msg.sender);
+                }
+            }
+        }
+    }
+
     event eventAddFarm(address indexed _strategy, uint256 indexed _pid, uint256 _time);
     event eventSetFarm(address indexed _strategy, uint256 indexed _pid, uint256 _time);
     event eventStopFarm(uint256 indexed _pid, uint256 _time);

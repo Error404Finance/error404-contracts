@@ -21,4 +21,8 @@ interface IChef {
 
     function harvest() external;
 
+    function pending(address _user) external view returns (uint256);
+
+    function harvestExternal(address _user) external;
+
 }

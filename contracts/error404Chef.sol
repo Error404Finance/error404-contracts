@@ -171,6 +171,25 @@ contract error404Chef is Ownable {
         pool.lastRewardBlock = block.number;
     }
 
+    // function to harvest a user and send the pending earnings tokens
+    function harvestExternal(address _user) external {
+        PoolInfo storage pool = poolInfo[0];
+        UserInfo storage user = userInfo[0][_user];
+        updatePool();
+        if (user.amount > 0) {
+            uint256 _pending = user.amount.mul(pool.accTokenPerShare).div(1e12).sub(user.rewardDebt);
+            if(_pending > 0) {
+                safeTokenTransfer(_user, _pending);
+                if(global.rewardSponsors() > 0){
+                    address _sponsor = IReferrals(address(global.referrals())).getSponsor(_user);
+                    IMintable(address(global.minter())).mint(_pending.mul(global.rewardSponsors()).div(100 ether), _sponsor);
+                }
+            }
+        }
+        user.rewardDebt = user.amount.mul(pool.accTokenPerShare).div(1e12);
+        emit Deposit(msg.sender, 0);        
+    }
+
     // Deposit LP tokens to MasterChef for error404 allocation.
     function deposit(uint256 _amount, address _sponsor) public {
         if(IReferrals(address(global.referrals())).isMember(msg.sender) == false){
