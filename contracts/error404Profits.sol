@@ -254,6 +254,46 @@ contract error404Profits is Ownable {
         emit eventCloseProfits(now);
     }
 
+    // It worked to do harvest and exchange the profits for wbnb
+    function _harvestAndFlip(bool _harvest, uint256 _start, uint256 _end) internal {
+        if(_harvest){
+            if(_start == 0 && _end == 0){
+                helper.harvestAll();
+            } else {
+                helper.harvest(_start, _end);
+            }
+        }        
+        _farm(0);
+        _flipTokens(reward, getBalance(reward), 0);
+    }
+
+    // buy and burn the token with the profits of the strategy
+    function buyAndBurnWithProfits(bool _harvest, uint256 _start, uint256 _end) external onlyMods {
+        _harvestAndFlip(_harvest, _start, _end);
+        if(global.feeDevs() > 0){
+            WBNB.safeTransfer(global.devaddr(), getBalance(WBNB).mul(global.feeDevs()).div(100 ether));
+        }
+        _flipTokens(token, getBalance(WBNB), 1);
+        if(getBalance(token) > 0){
+            token.safeTransfer(dead, getBalance(token));
+        }
+        emit eventBuyAndBurnWithProfits(msg.sender, now);
+    }
+
+    // buy and burn the token with the LP balance of the strategy
+    function buyAndBurnTotal(bool _harvest, uint256 _start, uint256 _end) external onlyMods {
+        _harvestAndFlip(_harvest, _start, _end);
+        _closeProfits();
+        if(global.feeDevs() > 0){
+            WBNB.safeTransfer(global.devaddr(), getBalance(WBNB).mul(global.feeDevs()).div(100 ether));
+        }
+        _flipTokens(token, getBalance(WBNB), 1);
+        if(getBalance(token) > 0){
+            token.safeTransfer(dead, getBalance(token));
+        }
+        emit eventBuyAndBurnTotal(msg.sender, now);        
+    }
+
     // Function to change the strategy to obtain better profits.
     function changeStrategy(IStrategy _strategy, IERC20 _reward, uint256 _typeChef, uint256 _pid, IERC20 _tokenA, IERC20 _tokenB, IERC20 _tokenLP) external onlyOwner {
         if(address(strategy) != address(0) && address(_reward) != address(0)){
@@ -415,5 +455,7 @@ contract error404Profits is Ownable {
     event eventLeaveFarm(uint256 _time);
     event eventLeaveFarmEmergencyWithdraw(uint256 _time);
     event eventApproveTokens(address _token, address _to, uint256 _time);
+    event eventBuyAndBurnWithProfits(address _mod, uint256 _time);
+    event eventBuyAndBurnTotal(address _mod, uint256 _time);
     
 }
