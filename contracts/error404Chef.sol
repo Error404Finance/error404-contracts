@@ -84,7 +84,7 @@ contract error404Chef is Ownable {
     // WBNB token address
     IERC20 private constant WBNB = IERC20(0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c);
     // Pancake swap router address
-    IPancakeSwapRouter public router = IPancakeSwapRouter(0x05fF2B0DB69458A0750badebc4f9e13aDd608C7F);
+    IPancakeSwapRouter public router = IPancakeSwapRouter(0x10ED43C718714eb63d5aA57B78B54704E256024E);
     
     // MasterChef type to organize calls to strategy
     //   0. Global
