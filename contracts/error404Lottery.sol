@@ -48,8 +48,6 @@ contract error404Lottery is Ownable {
     mapping (uint256 => uint256[]) public lotteryInfo;
     // issueId => [totalAmount, firstMatchAmount, secondMatchingAmount, thirdMatchingAmount]
     mapping (uint256 => uint256[]) public historyAmount;
-    // issueId => [totalAmount, firstMatchAmount, secondMatchingAmount, thirdMatchingAmount, BurnAmount, time]
-    mapping (uint256 => uint256[]) public historyAmountWithBurnAndDev;
     // issueId => trickyNumber => buyAmountSum
     mapping (uint256 => mapping(uint64 => uint256)) public userBuyAmountSum;
     // address => [tokenId]
@@ -118,6 +116,11 @@ contract error404Lottery is Ownable {
         enterDrawingPhase();
         drawing(_externalRandomNumber);
         reset();
+    }
+
+    function drawAndEnter(uint256 _externalRandomNumber) public isAdminOrOwner {
+        enterDrawingPhase();
+        drawing(_externalRandomNumber);
     }
 
     function reset() public isAdminOrOwner {
@@ -211,12 +214,6 @@ contract error404Lottery is Ownable {
         winningNumbers[3]=uint8(_randomNumber);
         historyNumbers[issueIndex] = winningNumbers;
         historyAmount[issueIndex] = calculateMatchingRewardAmount();
-        historyAmountWithBurnAndDev[issueIndex][0] = historyAmount[issueIndex][0];
-        historyAmountWithBurnAndDev[issueIndex][1] = historyAmount[issueIndex][1];
-        historyAmountWithBurnAndDev[issueIndex][2] = historyAmount[issueIndex][2];
-        historyAmountWithBurnAndDev[issueIndex][3] = historyAmount[issueIndex][3];
-        historyAmountWithBurnAndDev[issueIndex][4] = historyAmount[issueIndex][0].sub(historyAmount[issueIndex][1].add(historyAmount[issueIndex][2]).add(historyAmount[issueIndex][3]));
-        historyAmountWithBurnAndDev[issueIndex][5] = block.timestamp;
         drawingPhase = false;
         emit Drawing(issueIndex, winningNumbers);
     }
