@@ -18,6 +18,7 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./libs/IPancakeFactory.sol";
+import "./libs/IGlobals.sol";
 import "./libs/IChef.sol";
 import "./libs/IFees.sol";
 import "./libs/IHelper.sol";
@@ -26,13 +27,16 @@ contract error404Helper is Ownable {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
+    // Address of the global variables assignment contract
+    IGlobals public global;
+
     // Address of the fee contract
     IFees public FEES;
 
     // Lp CAKE_WBNB token address
-    address private constant CAKE_POOL = 0xA527a61703D82139F8a06Bc30097cC9CAA2df5A6;
+    address public CAKE_POOL = 0x0eD7e52944161450477ee417DE9Cd3a859b14fD0;
     // Lp BNB_BUSD_POOL token address
-    address private constant BNB_BUSD_POOL = 0x1B96B92314C44b159149f7E0303511fB2Fc4774f;
+    address public BNB_BUSD_POOL = 0x58F876857a02D6762E0101bb5C46A8c1ED44Dc16;
     
     // WBNB token address
     IERC20 private constant WBNB = IERC20(0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c);
@@ -40,9 +44,6 @@ contract error404Helper is Ownable {
     IERC20 private constant CAKE = IERC20(0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82);
     // BUSD token address
     IERC20 private constant BUSD = IERC20(0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56);
-
-    // Pancake swap factory address
-    IPancakeFactory private constant factory = IPancakeFactory(0xBCfCcbde45cE874adCB698cC183deBcF17952812);
 
     // Info of each pool.
     struct PoolInfo {
@@ -63,8 +64,9 @@ contract error404Helper is Ownable {
     // List of strategies in the helper
     mapping(address => bool) public farms;
 
-    constructor(IFees _FEES) public {
+    constructor(IFees _FEES, IGlobals _global) public {
         FEES = _FEES;
+        global = _global;
     }    
 
     // Returns the total farms
@@ -110,7 +112,7 @@ contract error404Helper is Ownable {
 
     // Returns the price of a token in BNB
     function tokenPriceInBNB(address _token) public view returns(uint) {
-        address pair = factory.getPair(_token, address(WBNB));
+        address pair = factory().getPair(_token, address(WBNB));
         uint decimal = uint(ERC20(_token).decimals());
         return WBNB.balanceOf(pair).mul(10**decimal).div(IERC20(_token).balanceOf(pair));
     }
@@ -185,6 +187,26 @@ contract error404Helper is Ownable {
         }
     }
 
+    // function to change the CAKE_POOL address
+    function changeCakePool(address _pool) external onlyOwner {
+        CAKE_POOL = _pool;
+        emit eventChangeCakePool(address(_pool), now);
+    }
+
+    // function to change the BNB_BUSD_POOL address
+    function changeBNB_BUSDPool(address _pool) external onlyOwner {
+        BNB_BUSD_POOL = _pool;
+        emit eventChangeBNB_BUSDPool(address(_pool), now);
+    }
+
+    // factory interface returns
+    function factory() public view returns(IPancakeFactory) {
+        IPancakeFactory _factory = IPancakeFactory(global.factory());
+        return _factory;
+    }
+
+    event eventChangeCakePool(address _pool, uint256 _time);
+    event eventChangeBNB_BUSDPool(address _pool, uint256 _time);
     event eventAddFarm(address indexed _strategy, uint256 indexed _pid, uint256 _time);
     event eventSetFarm(address indexed _strategy, uint256 indexed _pid, uint256 _time);
     event eventStopFarm(uint256 indexed _pid, uint256 _time);

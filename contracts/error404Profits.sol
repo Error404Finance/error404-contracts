@@ -60,11 +60,7 @@ contract error404Profits is Ownable {
     // WBNB token address
     IERC20 private constant WBNB = IERC20(0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c);
     // BUSD token address
-    IERC20 private constant BUSD = IERC20(0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56);      
-    // Pancake swap router address
-    IPancakeRouter02 public router = IPancakeRouter02(0x10ED43C718714eb63d5aA57B78B54704E256024E);
-    // Pancake swap factory address
-    IPancakeFactory private constant factory = IPancakeFactory(0xBCfCcbde45cE874adCB698cC183deBcF17952812);    
+    IERC20 private constant BUSD = IERC20(0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56);
     // Address Burn
     address dead = 0x000000000000000000000000000000000000dEaD;
     // list of approved tokens
@@ -97,13 +93,13 @@ contract error404Profits is Ownable {
         tokenB = _tokenB;
         tokenLP = _tokenLP;
         importer = _importer;
-        _approve(token, address(router));
-        _approve(WBNB, address(router));
-        _approve(BUSD, address(router));
-        _approve(reward, address(router));
-        _approve(tokenA, address(router));
-        _approve(tokenB, address(router));
-        _approve(tokenLP, address(router));
+        _approve(token, address(router()));
+        _approve(WBNB, address(router()));
+        _approve(BUSD, address(router()));
+        _approve(reward, address(router()));
+        _approve(tokenA, address(router()));
+        _approve(tokenB, address(router()));
+        _approve(tokenLP, address(router()));
         _approve(reward, address(strategy));
         _approve(tokenA, address(strategy));
         _approve(tokenB, address(strategy));
@@ -114,7 +110,7 @@ contract error404Profits is Ownable {
     function setPool(IStrategy _pool404) external onlyOwner {
         require(address(_pool404) != address(0), "!pool404");
         pool404 = _pool404;
-        IERC20 lp404 = IERC20(factory.getPair(address(token), address(WBNB)));
+        IERC20 lp404 = IERC20(factory().getPair(address(token), address(WBNB)));
         _approve(lp404, address(pool404));
         emit eventSetPool(now);
     }
@@ -122,8 +118,8 @@ contract error404Profits is Ownable {
     // exchange tokens for tokens
     function _flipTokens(IERC20 _token, uint256 _amount, uint256 _type) internal {
         if(_amount > 0 && address(_token) != address(WBNB)){
-            _approve(_token, address(router));
-            router.swapExactTokensForTokensSupportingFeeOnTransferTokens(_amount, uint256(0), global.getPaths(address(_token), _type), address(this), now.add(1800));
+            _approve(_token, address(router()));
+            router().swapExactTokensForTokensSupportingFeeOnTransferTokens(_amount, uint256(0), global.getPaths(address(_token), _type), address(this), now.add(1800));
         }
     }   
 
@@ -152,7 +148,7 @@ contract error404Profits is Ownable {
             _flipTokens(tokenA, getBalance(WBNB), 1);
             _farm(getBalance(tokenA));
             emit eventDeposit(now);
-        } else if(address(tokenA) != address(0) && address(tokenB) != address(0) && address(factory.getPair(address(tokenA), address(tokenB))) == address(tokenLP)){
+        } else if(address(tokenA) != address(0) && address(tokenB) != address(0) && address(factory().getPair(address(tokenA), address(tokenB))) == address(tokenLP)){
             _farm(0);
             _flipTokens(reward, getBalance(reward), 0);
             uint256 amountB = 0;
@@ -168,7 +164,7 @@ contract error404Profits is Ownable {
                 amountB = getBalance(BUSD);
             }
             if(getBalance(tokenA) > 0 && amountB > 0){
-                router.addLiquidity(
+                router().addLiquidity(
                     address(tokenA),
                     address(tokenB),
                     getBalance(tokenA),
@@ -193,7 +189,7 @@ contract error404Profits is Ownable {
         if(global.feeDevs() > 0){
             WBNB.safeTransfer(global.devaddr(), getBalance(WBNB).mul(global.feeDevs()).div(100 ether));
         }
-        IERC20 lp404 = IERC20(factory.getPair(address(token), address(WBNB)));
+        IERC20 lp404 = IERC20(factory().getPair(address(token), address(WBNB)));
         uint256 balanceToken = getBalanceToken(lp404, token);
         uint256 balanceWBNB = getBalanceToken(lp404, WBNB);
         uint256 amountWBNB = getBalance(WBNB);
@@ -202,7 +198,7 @@ contract error404Profits is Ownable {
         uint256 percentageToken = oneHundred.mul(oneHundred).div(balanceToken);
         uint256 tokensToSend = percentageWBNB.mul(oneHundred).div(percentageToken);
         IMintable(address(global.minter())).mint(tokensToSend, address(this));
-        router.addLiquidity(
+        router().addLiquidity(
             address(token),
             address(WBNB),
             tokensToSend,
@@ -242,9 +238,9 @@ contract error404Profits is Ownable {
         strategy.emergencyWithdraw(pid);
         if(address(tokenA) != address(0) && address(tokenB) == address(0)){
             _flipTokens(tokenA, getBalance(tokenA), 0);
-        } else if(address(tokenA) != address(0) && address(tokenB) != address(0) && address(factory.getPair(address(tokenA), address(tokenB))) == address(tokenLP)){
+        } else if(address(tokenA) != address(0) && address(tokenB) != address(0) && address(factory().getPair(address(tokenA), address(tokenB))) == address(tokenLP)){
             if(getBalance(tokenLP) > 0){
-                router.removeLiquidity(address(tokenA), address(tokenB), getBalance(tokenLP), 0, 0, address(this), block.timestamp);
+                router().removeLiquidity(address(tokenA), address(tokenB), getBalance(tokenLP), 0, 0, address(this), block.timestamp);
             }
             _flipTokens(tokenB, getBalance(tokenB), 0);
             _flipTokens(tokenA, getBalance(tokenA), 0);
@@ -269,10 +265,10 @@ contract error404Profits is Ownable {
             tokenA = _tokenA;
             tokenB = _tokenB;
             tokenLP = _tokenLP;
-            _approve(reward, address(router));
-            _approve(tokenA, address(router));
-            _approve(tokenB, address(router));
-            _approve(tokenLP, address(router));
+            _approve(reward, address(router()));
+            _approve(tokenA, address(router()));
+            _approve(tokenB, address(router()));
+            _approve(tokenLP, address(router()));
             _approve(reward, address(strategy));
             _approve(tokenA, address(strategy));
             _approve(tokenB, address(strategy));
@@ -331,19 +327,19 @@ contract error404Profits is Ownable {
     function recoverBEP20(IERC20 _token, address[] calldata _path) external onlyOwner {
         uint256 _amount = getBalance(_token);
         if(_amount > 0){
-            _approve(_token, address(router));
-            router.swapExactTokensForTokensSupportingFeeOnTransferTokens(_amount, uint256(0), _path, address(this), now.add(1800));
+            _approve(_token, address(router()));
+            router().swapExactTokensForTokensSupportingFeeOnTransferTokens(_amount, uint256(0), _path, address(this), now.add(1800));
             emit Recovered(address(_token), _amount);
         }
     }
 
     // Function to recover lost tokensLP
     function recoverLP(IERC20 _tokenA, IERC20 _tokenB) external onlyOwner {
-        IERC20 lp = IERC20(factory.getPair(address(_tokenA), address(_tokenB)));
+        IERC20 lp = IERC20(factory().getPair(address(_tokenA), address(_tokenB)));
         uint256 _amount = getBalance(lp);
         if(_amount > 0){
-            _approve(lp, address(router));
-            router.removeLiquidity(address(_tokenA), address(_tokenB), _amount, 0, 0, address(this), block.timestamp);
+            _approve(lp, address(router()));
+            router().removeLiquidity(address(_tokenA), address(_tokenB), _amount, 0, 0, address(this), block.timestamp);
             emit RecoveredLP(address(_tokenA), address(_tokenB), _amount);
         }
     }
@@ -390,6 +386,18 @@ contract error404Profits is Ownable {
         WBNB.safeTransferFrom(address(msg.sender), address(this), _amount);
         deposit(false, 0, 0);
         emit eventImportProfit(_amount, now);
+    }
+
+    // router interface returns
+    function router() public view returns(IPancakeRouter02) {
+        IPancakeRouter02 _router = IPancakeRouter02(global.router());
+        return _router;
+    }
+
+    // factory interface returns
+    function factory() public view returns(IPancakeFactory) {
+        IPancakeFactory _factory = IPancakeFactory(global.factory());
+        return _factory;
     }
 
     event eventSetMod(address _mod, bool _canMod);

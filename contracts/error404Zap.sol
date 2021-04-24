@@ -18,6 +18,7 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./libs/IPancakeRouter02.sol";
+import "./libs/IGlobals.sol";
 import "./libs/IWBNB.sol";
 import "./libs/IHelper.sol";
 
@@ -26,12 +27,18 @@ contract error404Zap is Ownable {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
+    // Address of the global variables assignment contract
+    IGlobals public global;
+
     // WBNB token address
-    IERC20 private constant WBNB = IERC20(0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c); 
-    // Pancake swap router address
-    IPancakeRouter02 public router = IPancakeRouter02(0x10ED43C718714eb63d5aA57B78B54704E256024E);
+    IERC20 private constant WBNB = IERC20(0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c);
+    
     // list of approved tokens
     mapping(address => mapping(address => bool)) public approvals;
+
+    constructor(IGlobals _global) public {
+        global = _global;
+    }   
 
     // the contract can receive bnb
     receive() external payable {}
@@ -42,8 +49,8 @@ contract error404Zap is Ownable {
         IWBNB _wbnb = IWBNB(address(WBNB));
         uint256 _value = msg.value;
         _wbnb.deposit{value: _value}();
-        _approve(WBNB, address(router));
-        router.swapExactTokensForTokensSupportingFeeOnTransferTokens(_value, uint256(0), _path, msg.sender, now.add(1800));
+        _approve(WBNB, address(router()));
+        router().swapExactTokensForTokensSupportingFeeOnTransferTokens(_value, uint256(0), _path, msg.sender, now.add(1800));
         uint256 _amount = getBalance(WBNB);
         if(_amount > 0){
             _wbnb.withdraw(_amount);
@@ -55,8 +62,8 @@ contract error404Zap is Ownable {
     function zapTokenforToken(IERC20 _token, uint256 _value, address[] calldata _path) external {
         require(_value > 0, "!value Token");
         _token.safeTransferFrom(address(msg.sender), address(this), _value);
-        _approve(_token, address(router));
-        router.swapExactTokensForTokensSupportingFeeOnTransferTokens(_value, uint256(0), _path, msg.sender, now.add(1800));
+        _approve(_token, address(router()));
+        router().swapExactTokensForTokensSupportingFeeOnTransferTokens(_value, uint256(0), _path, msg.sender, now.add(1800));
         if(getBalance(_token) > 0){
             _token.safeTransfer(msg.sender, getBalance(_token));
         }
@@ -66,8 +73,8 @@ contract error404Zap is Ownable {
     function zapTokenforBNB(IERC20 _token, uint256 _value, address[] calldata _path) external {
         require(_value > 0, "!value Token");
         _token.safeTransferFrom(address(msg.sender), address(this), _value);
-        _approve(_token, address(router));
-        router.swapExactTokensForETHSupportingFeeOnTransferTokens(_value, uint256(0), _path, msg.sender, now.add(1800));
+        _approve(_token, address(router()));
+        router().swapExactTokensForETHSupportingFeeOnTransferTokens(_value, uint256(0), _path, msg.sender, now.add(1800));
         if(getBalance(_token) > 0){
             _token.safeTransfer(msg.sender, getBalance(_token));
         }
@@ -79,9 +86,9 @@ contract error404Zap is Ownable {
         uint256 _value = msg.value;
         IWBNB _wbnb = IWBNB(address(WBNB));
         _wbnb.deposit{value: _value}();
-        _approve(WBNB, address(router));
-        _approve(_tokenA, address(router));
-        _approve(_tokenB, address(router));
+        _approve(WBNB, address(router()));
+        _approve(_tokenA, address(router()));
+        _approve(_tokenB, address(router()));
         _zapAddLiquidity(_tokenA, _tokenB, _value, _pathA, _pathB);
         uint256 _amountWBNB = getBalance(WBNB);
         if(_amountWBNB > 0){
@@ -95,10 +102,10 @@ contract error404Zap is Ownable {
     function zapAddLiquidityForToken(IERC20 _token, IERC20 _tokenA, IERC20 _tokenB, uint256 _value, address[] calldata _pathA, address[] calldata _pathB) external {
         require(_value > 0, "!value Token");
         _token.safeTransferFrom(address(msg.sender), address(this), _value);
-        _approve(WBNB, address(router));
-        _approve(_token, address(router));
-        _approve(_tokenA, address(router));
-        _approve(_tokenB, address(router));
+        _approve(WBNB, address(router()));
+        _approve(_token, address(router()));
+        _approve(_tokenA, address(router()));
+        _approve(_tokenB, address(router()));
         _zapAddLiquidity(_tokenA, _tokenB, _value, _pathA, _pathB);
         if(getBalance(_token) > 0){
             _token.safeTransfer(msg.sender, getBalance(_token));
@@ -110,8 +117,8 @@ contract error404Zap is Ownable {
     function zapRemoveLiquidity(IERC20 _lp, IERC20 _tokenA, IERC20 _tokenB, uint256 _value) external {
         require(_value > 0, "!value Token");
         _lp.safeTransferFrom(address(msg.sender), address(this), _value);
-        _approve(_lp, address(router));
-        router.removeLiquidity(address(_tokenA), address(_tokenB), _value, 0, 0, msg.sender, now.add(1800));
+        _approve(_lp, address(router()));
+        router().removeLiquidity(address(_tokenA), address(_tokenB), _value, 0, 0, msg.sender, now.add(1800));
         if(getBalance(_lp) > 0){
             _lp.safeTransfer(msg.sender, getBalance(_lp));
         }
@@ -139,14 +146,14 @@ contract error404Zap is Ownable {
     // internal function to add liquidity
     function _zapAddLiquidity(IERC20 _tokenA, IERC20 _tokenB, uint256 _value, address[] calldata _pathA, address[] calldata _pathB) internal {
         if(address(_tokenB) == address(WBNB)){
-            router.swapExactTokensForTokensSupportingFeeOnTransferTokens(getBalance(WBNB).div(2), uint256(0), _pathA, address(this), now.add(1800));
+            router().swapExactTokensForTokensSupportingFeeOnTransferTokens(getBalance(WBNB).div(2), uint256(0), _pathA, address(this), now.add(1800));
         } else {
             if(_pathB.length > 0){
-                router.swapExactTokensForTokensSupportingFeeOnTransferTokens(_value, uint256(0), _pathB, address(this), now.add(1800));
+                router().swapExactTokensForTokensSupportingFeeOnTransferTokens(_value, uint256(0), _pathB, address(this), now.add(1800));
             }
-            router.swapExactTokensForTokensSupportingFeeOnTransferTokens(getBalance(_tokenB).div(2), uint256(0), _pathA, address(this), now.add(1800));
+            router().swapExactTokensForTokensSupportingFeeOnTransferTokens(getBalance(_tokenB).div(2), uint256(0), _pathA, address(this), now.add(1800));
         }
-        router.addLiquidity(
+        router().addLiquidity(
             address(_tokenA),
             address(_tokenB),
             getBalance(_tokenA),
@@ -179,6 +186,12 @@ contract error404Zap is Ownable {
             _token.approve(_to, uint(~0));
             approvals[address(_token)][_to] = true;
         }
+    }
+
+    // router interface returns
+    function router() public view returns(IPancakeRouter02) {
+        IPancakeRouter02 _router = IPancakeRouter02(global.router());
+        return _router;
     }
 
     event Recovered(address _token, uint256 _amount);

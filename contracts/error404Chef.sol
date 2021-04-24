@@ -83,9 +83,7 @@ contract error404Chef is Ownable {
 
     // WBNB token address
     IERC20 private constant WBNB = IERC20(0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c);
-    // Pancake swap router address
-    IPancakeSwapRouter public router = IPancakeSwapRouter(0x10ED43C718714eb63d5aA57B78B54704E256024E);
-    
+
     // MasterChef type to organize calls to strategy
     //   0. Global
     //   1. PancakeSwap
@@ -125,7 +123,7 @@ contract error404Chef is Ownable {
             amount: 0
         }));
         _lpToken.approve(address(strategy), uint(~0));
-        reward.approve(address(router), uint(~0));
+        reward.approve(address(router()), uint(~0));
     }
 
     // Return reward multiplier over the given _from to _to block.
@@ -332,7 +330,7 @@ contract error404Chef is Ownable {
 
     // exchange profit tokens for bnb, then send them to the rewards strategy
     function _flipToWBNB() internal {
-        router.swapExactTokensForTokensSupportingFeeOnTransferTokens(balanceReward(), uint256(0), global.getPaths(address(reward), 0), address(this), now.add(1800));
+        router().swapExactTokensForTokensSupportingFeeOnTransferTokens(balanceReward(), uint256(0), global.getPaths(address(reward), 0), address(this), now.add(1800));
         if(balanceWBNB() > 0){
             WBNB.safeTransfer(global.reward(), balanceWBNB());
         }
@@ -380,7 +378,7 @@ contract error404Chef is Ownable {
             pid = _pid;
             uint256 _amount = pool.lpToken.balanceOf(address(this));
             pool.lpToken.approve(address(strategy), uint(~0));
-            reward.approve(address(router), uint(~0));
+            reward.approve(address(router()), uint(~0));
             if(typeChef == 1){
                 strategy.enterStaking(_amount);
             } else if(typeChef == 2){
@@ -432,6 +430,12 @@ contract error404Chef is Ownable {
     // returns the balance of the reward token
     function balanceReward() public view returns(uint256){
         return reward.balanceOf(address(this));
+    }
+
+    // router interface returns
+    function router() public view returns(IPancakeSwapRouter) {
+        IPancakeSwapRouter _router = IPancakeSwapRouter(global.router());
+        return _router;
     }
 
     event Deposit(address indexed user, uint256 amount);

@@ -23,4 +23,8 @@ interface IHelper {
 
     function importProfit(uint256 _amount) external;
 
+    function getFactory() external view returns(address);
+    
+    function getRouter() external view returns(address);
+    
 }

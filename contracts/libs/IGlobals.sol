@@ -47,4 +47,8 @@ interface IGlobals {
 
     function token1() external view returns (address);
 
+    function router() external view returns (address);
+
+    function factory() external view returns (address);
+
 }

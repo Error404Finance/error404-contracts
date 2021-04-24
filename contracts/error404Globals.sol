@@ -48,6 +48,10 @@ contract error404Globals is Ownable {
     uint256 public feeDevs;
     // List of the path for the exchange of tokens
     mapping(address => mapping(uint256 => address[])) public paths;
+    // Pancake swap factory address
+    address public factory = 0xcA143Ce32Fe78f1f7019d7d551a6402fC5350c73;
+    // Pancake swap factory address
+    address public router = 0x10ED43C718714eb63d5aA57B78B54704E256024E;
 
     constructor(
         address _token,
@@ -157,6 +161,20 @@ contract error404Globals is Ownable {
         return _paths;
     }    
 
+    // function to change the router address
+    function changeRouter(address _router) external onlyOwner {
+        router = _router;
+        emit eventChangeRouter(address(_router), now);
+    }
+
+    // function to change the factory address
+    function changeFactory(address _factory) external onlyOwner {
+        factory = _factory;
+        emit eventChangeFactory(address(_factory), now);
+    }
+
+    event eventChangeRouter(address _router, uint256 _time);
+    event eventChangeFactory(address _factory, uint256 _time);
     event eventSetDevAddress(address indexed user, address indexed _addr);
     event eventSetFeeAddress(address indexed user, address indexed _addr);
     event eventSetReferralsAddress(address indexed user, address indexed _addr);
