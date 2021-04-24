@@ -88,6 +88,7 @@ contract error404Chef is Ownable {
     //   0. Global
     //   1. PancakeSwap
     //   2. SmartChef
+    //   3. GooseV2
     uint256 public typeChef;
 
     constructor(

@@ -35,4 +35,6 @@ interface IStrategy {
 
     function importStrategy(uint256 _amount) external;
 
+    function harvestFor(uint256 _pid, address _user) external;
+
 }
