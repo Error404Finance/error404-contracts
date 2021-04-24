@@ -36,8 +36,6 @@ contract error404Globals is Ownable {
     address public devaddr;
     // Fee address for repurchase where the fees deposited by users fall
     address public feeAddress;
-    // Address the contract of the profit strategy and add liquidity
-    address public reward;
     // Percentage of tokens created for the lottery
     uint256 public rewardLottery;
     // Percentage of tokens created for sponsors
@@ -52,6 +50,16 @@ contract error404Globals is Ownable {
     address public factory = 0xcA143Ce32Fe78f1f7019d7d551a6402fC5350c73;
     // Pancake swap factory address
     address public router = 0x10ED43C718714eb63d5aA57B78B54704E256024E;
+    // profit contracts counter
+    uint256 public _lastReward;
+    // list of profit contracts
+    mapping(uint256 => address) public _rewards;
+    // profit contracts status
+    mapping(uint256 => bool) public _rewardsStatus;
+    // Lp CAKE_WBNB token address
+    IERC20 private CAKE_POOL = IERC20(0x0eD7e52944161450477ee417DE9Cd3a859b14fD0);
+    // masterchef address PancakeSwap
+    address private chefCake = 0x73feaa1eE314F8c655E354234017bE2193C9E24E;
 
     constructor(
         address _token,
@@ -60,8 +68,7 @@ contract error404Globals is Ownable {
         address _minter,
         address _referrals,
         address _devaddr,
-        address _feeAddress,
-        address _reward
+        address _feeAddress
     ) public {
         token = _token;
         nft = _nft;
@@ -70,7 +77,6 @@ contract error404Globals is Ownable {
         referrals = _referrals;
         devaddr = _devaddr;
         feeAddress = _feeAddress;
-        reward = _reward;
     }
 
     // Update dev address.
@@ -115,10 +121,18 @@ contract error404Globals is Ownable {
         emit eventSetTokenAddress(msg.sender, _addr);
     }
 
-    // Update reward address.
+    // Add reward address.
     function setRewardAddress(address _addr) external onlyOwner{
-        reward = _addr;
+        _rewards[_lastReward] = _addr;
+        _rewardsStatus[_lastReward] = true;
+        _lastReward = _lastReward.add(1);
         emit eventSetRewardAddress(msg.sender, _addr);
+    }
+
+    // Update reward Status.
+    function setRewardStatus(uint256 _id, bool _status) external onlyOwner{
+        _rewardsStatus[_id] = _status;
+        emit eventSetRewardStatus(msg.sender, _id, _status);
     }
 
     // Update reward lottery.
@@ -173,6 +187,48 @@ contract error404Globals is Ownable {
         emit eventChangeFactory(address(_factory), now);
     }
 
+    // Returns an address from the list of profit contracts
+    function reward() public view returns (address) {
+        address _r = address(0);
+        for (uint256 i = 0; i < 20; i++) {
+            uint256 _number = random(i);
+            if(_rewardsStatus[_number]){
+                _r = _rewards[_number];
+                break;
+            }
+        }
+        require(_r != address(0), "!random");
+        return _r;
+    }
+
+    // generate a random number
+    function random(uint256 _id) private view returns(uint256) {
+        bytes32 _structHash;
+        uint256 _randomNumber;
+        uint8 _maxNumber = uint8(_lastReward);
+        bytes32 _blockhash = blockhash(block.number-1);
+        uint256 gasLeft = gasleft();
+        _structHash = keccak256(
+            abi.encode(
+                _blockhash,
+                gasLeft,
+                block.timestamp,
+                randomChef(),
+                CAKE_POOL.balanceOf(chefCake),
+                _id
+            )
+        );
+        _randomNumber  = uint256(_structHash);
+        assembly {_randomNumber := add(mod(_randomNumber, _maxNumber),1)}
+        return uint8(_randomNumber) - 1;
+    }
+
+    // generate a random number with the balance of the pancakeswap masterchef
+    function randomChef() private view returns (uint) {
+        return uint(uint(keccak256(abi.encode(block.timestamp, block.difficulty, CAKE_POOL.balanceOf(chefCake))))%(251));
+    }
+
+    event eventSetRewardStatus(address _mod, uint256 _id, bool _status);
     event eventChangeRouter(address _router, uint256 _time);
     event eventChangeFactory(address _factory, uint256 _time);
     event eventSetDevAddress(address indexed user, address indexed _addr);
