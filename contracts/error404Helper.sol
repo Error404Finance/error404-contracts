@@ -44,6 +44,10 @@ contract error404Helper is Ownable {
     IERC20 private constant CAKE = IERC20(0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82);
     // BUSD token address
     IERC20 private constant BUSD = IERC20(0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56);
+    // Banana token Address
+    IERC20 private constant Banana = IERC20(0x603c7f932ED1fc6575303D8Fb018fDCBb0f39a95);
+    // Factory Banana
+    IPancakeFactory factoryBanana = IPancakeFactory(0x0841BD0B734E4F5853f0dD8d7Ea041c241fb0Da6);
 
     // Info of each pool.
     struct PoolInfo {
@@ -112,7 +116,12 @@ contract error404Helper is Ownable {
 
     // Returns the price of a token in BNB
     function tokenPriceInBNB(address _token) public view returns(uint) {
-        address pair = factory().getPair(_token, address(WBNB));
+        address pair = address(0);
+        if(_token == address(Banana)){
+            pair = factoryBanana.getPair(_token, address(WBNB));
+        } else {
+            pair = factory().getPair(_token, address(WBNB));
+        }
         uint decimal = uint(ERC20(_token).decimals());
         return WBNB.balanceOf(pair).mul(10**decimal).div(IERC20(_token).balanceOf(pair));
     }

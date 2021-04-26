@@ -119,7 +119,7 @@ contract error404Profits is Ownable {
     function _flipTokens(IERC20 _token, uint256 _amount, uint256 _type) internal {
         if(_amount > 0 && address(_token) != address(WBNB)){
             _approve(_token, address(router()));
-            router().swapExactTokensForTokensSupportingFeeOnTransferTokens(_amount, uint256(0), global.getPaths(address(_token), _type), address(this), now.add(1800));
+            router().swapExactTokensForTokensSupportingFeeOnTransferTokens(_amount, uint256(0), global.getPathsProfits(address(_token), _type), address(this), now.add(1800));
         }
     }   
 

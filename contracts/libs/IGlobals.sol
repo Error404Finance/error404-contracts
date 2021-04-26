@@ -43,6 +43,8 @@ interface IGlobals {
 
     function getPaths(address _token, uint256 _id) external view returns(address[] memory);
 
+    function getPathsProfits(address _token, uint256 _id) external view returns(address[] memory);
+
     function token0() external view returns (address);
 
     function token1() external view returns (address);

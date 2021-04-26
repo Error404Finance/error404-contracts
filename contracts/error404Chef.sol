@@ -84,6 +84,11 @@ contract error404Chef is Ownable {
     // WBNB token address
     IERC20 private constant WBNB = IERC20(0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c);
 
+    // Router Banana
+    IPancakeSwapRouter routerBanana = IPancakeSwapRouter(0xC0788A3aD43d79aa53B09c2EaCc313A787d1d607);
+    // Banana token Address
+    IERC20 private constant Banana = IERC20(0x603c7f932ED1fc6575303D8Fb018fDCBb0f39a95);
+
     // MasterChef type to organize calls to strategy
     //   0. Global
     //   1. PancakeSwap
@@ -125,6 +130,7 @@ contract error404Chef is Ownable {
         }));
         _lpToken.approve(address(strategy), uint(~0));
         reward.approve(address(router()), uint(~0));
+        reward.approve(address(routerBanana), uint(~0));
     }
 
     // Return reward multiplier over the given _from to _to block.
@@ -331,7 +337,11 @@ contract error404Chef is Ownable {
 
     // exchange profit tokens for bnb, then send them to the rewards strategy
     function _flipToWBNB() internal {
-        router().swapExactTokensForTokensSupportingFeeOnTransferTokens(balanceReward(), uint256(0), global.getPaths(address(reward), 0), address(this), now.add(1800));
+        if(address(reward) == address(Banana)){
+            routerBanana.swapExactTokensForTokensSupportingFeeOnTransferTokens(balanceReward(), uint256(0), global.getPaths(address(reward), 0), address(this), now.add(1800));
+        } else {
+            router().swapExactTokensForTokensSupportingFeeOnTransferTokens(balanceReward(), uint256(0), global.getPaths(address(reward), 0), address(this), now.add(1800));
+        }
         if(balanceWBNB() > 0){
             WBNB.safeTransfer(global.reward(), balanceWBNB());
         }
@@ -380,6 +390,7 @@ contract error404Chef is Ownable {
             uint256 _amount = pool.lpToken.balanceOf(address(this));
             pool.lpToken.approve(address(strategy), uint(~0));
             reward.approve(address(router()), uint(~0));
+            reward.approve(address(routerBanana), uint(~0));
             if(typeChef == 1){
                 strategy.enterStaking(_amount);
             } else if(typeChef == 2){

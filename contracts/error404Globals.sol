@@ -46,6 +46,8 @@ contract error404Globals is Ownable {
     uint256 public feeDevs;
     // List of the path for the exchange of tokens
     mapping(address => mapping(uint256 => address[])) public paths;
+    // List of the path for the exchange of tokens to profits 
+    mapping(address => mapping(uint256 => address[])) public pathsProfits;
     // Pancake swap factory address
     address public factory = 0xcA143Ce32Fe78f1f7019d7d551a6402fC5350c73;
     // Pancake swap factory address
@@ -164,7 +166,13 @@ contract error404Globals is Ownable {
         paths[_token][_id] = _path;
         emit eventSetpath(_token, _id);
     }
-
+    
+    // function to update the path profits of a token
+    function setPathProfits(address _token, uint256 _id, address[] calldata _path) external onlyOwner{
+        pathsProfits[_token][_id] = _path;
+        emit eventSetpath(_token, _id);
+    }
+    
     // function that returns the path of the token routes
     function getPaths(address _token, uint256 _id) public view returns(address[] memory) {
         uint256 _length =  paths[_token][_id].length;
@@ -173,7 +181,17 @@ contract error404Globals is Ownable {
             _paths[i] = paths[_token][_id][i];
         }
         return _paths;
-    }    
+    }
+
+    // function that returns the path profits of the token routes
+    function getPathsProfits(address _token, uint256 _id) public view returns(address[] memory) {
+        uint256 _length =  pathsProfits[_token][_id].length;
+        address[] memory _paths = new address[](_length);
+        for (uint256 i = 0; i < _length; i++) {
+            _paths[i] = pathsProfits[_token][_id][i];
+        }
+        return _paths;
+    }       
 
     // function to change the router address
     function changeRouter(address _router) external onlyOwner {
