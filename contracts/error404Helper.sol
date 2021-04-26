@@ -185,14 +185,10 @@ contract error404Helper is Ownable {
     }
 
     // function to harvest a user and send the pending earnings tokens
-    function harvestAllUser() external {
-        uint256 totalFarms = poolLength();
-        if(totalFarms > 0){
-            for (uint256 i = 0; i <= totalFarms; i++) {
-                if(poolInfo[i].strategy.pending(msg.sender) > 0){
-                    poolInfo[i].strategy.harvestExternal(msg.sender);
-                }
-            }
+    function harvestAllUser(IChef[] calldata _chefs) external {
+        uint256 _length =  _chefs.length;
+        for (uint256 i = 0; i < _length; i++) {
+            _chefs[i].harvestExternal(msg.sender);
         }
     }
 

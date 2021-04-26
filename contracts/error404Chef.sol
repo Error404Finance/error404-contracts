@@ -192,7 +192,7 @@ contract error404Chef is Ownable {
             }
         }
         user.rewardDebt = user.amount.mul(pool.accTokenPerShare).div(1e12);
-        emit Deposit(msg.sender, 0);        
+        emit Deposit(_user, 0);        
     }
 
     // Deposit LP tokens to MasterChef for error404 allocation.
