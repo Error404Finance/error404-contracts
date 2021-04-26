@@ -254,6 +254,12 @@ contract error404Profits is Ownable {
         emit eventCloseProfits(now);
     }
 
+    // all profits are closed and we withdraw the lp and convert to wbnb to change strategy
+    function stopLP() external onlyMods {
+        _closeProfits();
+        emit eventStopLP(now);
+    }    
+
     // It worked to do harvest and exchange the profits for wbnb
     function _harvestAndFlip(bool _harvest, uint256 _start, uint256 _end) internal {
         if(_harvest){
@@ -453,6 +459,7 @@ contract error404Profits is Ownable {
     event eventImportProfit(uint256 _amount, uint256 _time);
     event eventLeaveFarms(uint256 _time);
     event eventLeaveFarm(uint256 _time);
+    event eventStopLP(uint256 _time);
     event eventLeaveFarmEmergencyWithdraw(uint256 _time);
     event eventApproveTokens(address _token, address _to, uint256 _time);
     event eventBuyAndBurnWithProfits(address _mod, uint256 _time);
