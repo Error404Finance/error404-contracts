@@ -86,7 +86,7 @@ contract error404Zap is Ownable {
         _approve(_tokenA, address(router()));
         _approve(_tokenB, address(router()));
         _approve(_token, address(_chef));
-        if(address(_token) == address(Banana)){
+        if(address(_tokenA) == address(Banana)){
             _approve(WBNB, address(routerBanana));
             _approve(_tokenA, address(routerBanana));
             _approve(_tokenB, address(routerBanana));
