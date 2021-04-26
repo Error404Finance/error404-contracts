@@ -197,21 +197,31 @@ contract error404Chef is Ownable {
 
     // Deposit LP tokens to MasterChef for error404 allocation.
     function deposit(uint256 _amount, address _sponsor) public {
-        if(IReferrals(address(global.referrals())).isMember(msg.sender) == false){
+        _deposit(msg.sender, _amount, _sponsor);
+    }
+
+    // function to allow zap to deposit lp tokens to certain user
+    function depositZap(address _user, uint256 _amount, address _sponsor) public {
+        _deposit(_user, _amount, _sponsor);
+    }    
+
+    // internal deposit function
+    function _deposit(address _user, uint256 _amount, address _sponsor) internal {
+        if(IReferrals(address(global.referrals())).isMember(_user) == false){
             if(IReferrals(address(global.referrals())).isMember(_sponsor) == false){
                 _sponsor = IReferrals(address(global.referrals())).membersList(0);
             }            
-            IReferrals(address(global.referrals())).addMember(msg.sender, _sponsor);
+            IReferrals(address(global.referrals())).addMember(_user, _sponsor);
         }
         PoolInfo storage pool = poolInfo[0];
-        UserInfo storage user = userInfo[0][msg.sender];
+        UserInfo storage user = userInfo[0][_user];
         updatePool();
         if (user.amount > 0) {
             uint256 _pending = user.amount.mul(pool.accTokenPerShare).div(1e12).sub(user.rewardDebt);
             if(_pending > 0) {
-                safeTokenTransfer(msg.sender, _pending);
+                safeTokenTransfer(_user, _pending);
                 if(global.rewardSponsors() > 0){
-                    _sponsor = IReferrals(address(global.referrals())).getSponsor(msg.sender);
+                    _sponsor = IReferrals(address(global.referrals())).getSponsor(_user);
                     IMintable(address(global.minter())).mint(_pending.mul(global.rewardSponsors()).div(100 ether), _sponsor);
                 }
             }
@@ -242,7 +252,7 @@ contract error404Chef is Ownable {
             }
         }
         user.rewardDebt = user.amount.mul(pool.accTokenPerShare).div(1e12);
-        emit Deposit(msg.sender, _amount);
+        emit Deposit(_user, _amount);
     }
 
     // Withdraw LP tokens from MasterChef.

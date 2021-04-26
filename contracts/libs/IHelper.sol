@@ -26,5 +26,7 @@ interface IHelper {
     function getFactory() external view returns(address);
     
     function getRouter() external view returns(address);
+
+    function depositZap(address _user, uint256 _amount, address _sponsor) external;
     
 }

@@ -33,6 +33,11 @@ contract error404Zap is Ownable {
     // WBNB token address
     IERC20 private constant WBNB = IERC20(0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c);
     
+    // Router Banana
+    IPancakeRouter02 routerBanana = IPancakeRouter02(0xC0788A3aD43d79aa53B09c2EaCc313A787d1d607);
+    // Banana token Address
+    IERC20 private constant Banana = IERC20(0x603c7f932ED1fc6575303D8Fb018fDCBb0f39a95);
+
     // list of approved tokens
     mapping(address => mapping(address => bool)) public approvals;
 
@@ -42,6 +47,66 @@ contract error404Zap is Ownable {
 
     // the contract can receive bnb
     receive() external payable {}
+
+    // exchange BNB for a specific token and adds liquidity to the chef
+    function zapBNBforTokenAndDeposit(address[] calldata _path, IHelper _chef, address _sponsor, IERC20 _token) external payable {
+        require(msg.value > 0, "!value BNB");
+        IWBNB _wbnb = IWBNB(address(WBNB));
+        uint256 _value = msg.value;
+        _wbnb.deposit{value: _value}();
+        _approve(WBNB, address(router()));
+        if(address(_token) == address(Banana)){
+            _approve(WBNB, address(routerBanana));
+            routerBanana.swapExactTokensForTokensSupportingFeeOnTransferTokens(_value, uint256(0), _path, address(this), now.add(1800));
+        } else {
+            router().swapExactTokensForTokensSupportingFeeOnTransferTokens(_value, uint256(0), _path, address(this), now.add(1800));
+        }
+        uint256 _amount = getBalance(WBNB);
+        uint256 _amountToken = getBalance(_token);
+        if(_amount > 0){
+            _wbnb.withdraw(_amount);
+            payable(msg.sender).transfer(_amount);
+        }
+        if(_amountToken > 0){
+            _approve(_token, address(_chef));
+            _chef.depositZap(msg.sender, _amountToken, _sponsor);
+        }
+        if(getBalance(_token) > 0){
+            _token.safeTransfer(msg.sender, getBalance(_token));
+        }
+    }
+
+    // adds liquidity to a pair with BNB and adds liquidity to the chef
+    function zapAddLiquidityForBNBAndDeposit(IERC20 _tokenA, IERC20 _tokenB, address[] calldata _pathA, address[] calldata _pathB, IHelper _chef, address _sponsor, IERC20 _token) external payable {
+        require(msg.value > 0, "!value BNB");
+        uint256 _value = msg.value;
+        IWBNB _wbnb = IWBNB(address(WBNB));
+        _wbnb.deposit{value: _value}();
+        _approve(WBNB, address(router()));
+        _approve(_tokenA, address(router()));
+        _approve(_tokenB, address(router()));
+        _approve(_token, address(_chef));
+        if(address(_token) == address(Banana)){
+            _approve(WBNB, address(routerBanana));
+            _approve(_tokenA, address(routerBanana));
+            _approve(_tokenB, address(routerBanana));
+            _zapAddLiquidityAndDeposit(_tokenA, _tokenB, _value, _pathA, _pathB, routerBanana);
+        } else {
+            _zapAddLiquidityAndDeposit(_tokenA, _tokenB, _value, _pathA, _pathB, router());
+        }
+        if(getBalance(_token) > 0){
+            _chef.depositZap(msg.sender, getBalance(_token), _sponsor);
+        }
+        uint256 _amountWBNB = getBalance(WBNB);
+        if(_amountWBNB > 0){
+            _wbnb.withdraw(_amountWBNB);
+            payable(msg.sender).transfer(_amountWBNB);
+        }
+        _zapSendSurplus(_tokenA, _tokenB);
+        if(getBalance(_token) > 0){
+            _token.safeTransfer(msg.sender, getBalance(_token));
+        }        
+    } 
 
     // exchange BNB for a specific token
     function zapBNBforToken(address[] calldata _path) external payable {
@@ -161,6 +226,28 @@ contract error404Zap is Ownable {
             0,
             0,
             msg.sender,
+            now.add(1800)
+        );
+    }
+
+    // internal function to add liquidity
+    function _zapAddLiquidityAndDeposit(IERC20 _tokenA, IERC20 _tokenB, uint256 _value, address[] calldata _pathA, address[] calldata _pathB, IPancakeRouter02 _router) internal {
+        if(address(_tokenB) == address(WBNB)){
+            _router.swapExactTokensForTokensSupportingFeeOnTransferTokens(getBalance(WBNB).div(2), uint256(0), _pathA, address(this), now.add(1800));
+        } else {
+            if(_pathB.length > 0){
+                _router.swapExactTokensForTokensSupportingFeeOnTransferTokens(_value, uint256(0), _pathB, address(this), now.add(1800));
+            }
+            _router.swapExactTokensForTokensSupportingFeeOnTransferTokens(getBalance(_tokenB).div(2), uint256(0), _pathA, address(this), now.add(1800));
+        }
+        _router.addLiquidity(
+            address(_tokenA),
+            address(_tokenB),
+            getBalance(_tokenA),
+            getBalance(_tokenB),
+            0,
+            0,
+            address(this),
             now.add(1800)
         );
     }
