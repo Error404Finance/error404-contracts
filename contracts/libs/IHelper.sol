@@ -19,7 +19,7 @@ interface IHelper {
 
     function harvest(uint256 _start, uint256 _end) external;
 
-    function temporalBytecode() external;
+    function temporalBytecode_1_0_0_1() external;
 
     function importProfit(uint256 _amount) external;
 

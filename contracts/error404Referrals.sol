@@ -34,6 +34,10 @@ contract error404Referrals is Ownable {
     uint256 public lastMember; // ID of the last registered member
     mapping(address => bool) private _mods; // List Mods
 
+    constructor() public {
+        _mods[msg.sender] = true;
+    }
+
     // Only mods
     modifier onlyMod {
         require(isMod(msg.sender) == true, "error404Referrals: caller is not the mod");
